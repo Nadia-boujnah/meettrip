@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
-// import Footer from "@/components/Footer"; // << tu peux commenter ça pour l'instant
+import Footer from "../components/ui/footer";
+
 
 export default function GuestLayout({ children }) {
   return (
@@ -11,9 +12,9 @@ export default function GuestLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-
-      {/* Footer */}
-      {/* <Footer /> */}
+    {/* Footer */}
+    <Footer />
+      
     </div>
   );
 }
