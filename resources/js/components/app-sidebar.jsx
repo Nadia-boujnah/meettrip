@@ -25,7 +25,7 @@ import {
 import logoMeetTrip from '@/assets/images/logomeettrip.png';
 
 const mainNavItems = [
-  { title: 'Accueil', url: '/dashboard', icon: Home },
+  { title: 'Accueil', url: '/dashboard/client', icon: Home },
   { title: 'Profil', url: '/profil', icon: User },
   { title: 'Activités', url: '/activitesconnected', icon: Handshake },
   { title: 'Mes réservations', url: '/my-reservations', icon: CalendarCheck },
@@ -33,15 +33,14 @@ const mainNavItems = [
   { title: 'Messagerie', url: '/messagerie', icon: Mail, badge: 2 },
   { title: 'Annonces', url: '/annonces', icon: Newspaper },
 ];
+
 const adminNavItems = [
   { title: 'Accueil', url: '/admin/dashboard', icon: Home },              
   { title: 'Profil des membres', url: '/admin/admin-organizers', icon: Handshake },                 
   { title: 'Validation Identités', url: '/admin/identity-validation', icon: CalendarCheck }, 
   { title: 'Statistiques', url: '/admin/statistics', icon: Map },   
   { title: 'Vue des activités', url: '/admin/admin-activities', icon: ListTodo },
-          
 ];
-
 
 const footerNavItems = [
   { title: 'Paramètres', url: '/parametres', icon: Settings },
@@ -53,11 +52,10 @@ export function AppSidebar() {
 
   console.log(auth);
 
-  // Par défaut on met une valeur mainNavItems
   let navItems = mainNavItems;
 
-  // Si l'utilisateur est ADMIN (on changera + tard avec les rôles) on affiche le menu Admin
-  if(auth.user && auth.user.name == "Yanina rzv") {
+  const isAdmin = auth.user && auth.user.role === "admin";
+  if (isAdmin) {
     navItems = adminNavItems;
   } 
 
@@ -67,20 +65,17 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-             <Link
-              href={auth.user && auth.user.name === "Yanina rzv" ? "/admin/dashboard" : "/dashboard"}
-              prefetch
-              className="flex items-center gap-2 px-2 pt-4 mb-9"
-            >
-
+              <Link
+                href={isAdmin ? "/admin/dashboard" : "/dashboard/client"}
+                prefetch
+                className="flex items-center gap-2 px-2 pt-4 mb-9"
+              >
                 <img src={logoMeetTrip} alt="MeetTrip Logo" className="h-12" />
                 <span className="text-[#2C7CA9] text-lg font-semibold">MeetTrip</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
-       
       </SidebarHeader>
 
       <SidebarContent>

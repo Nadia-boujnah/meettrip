@@ -1,5 +1,7 @@
+"use client"
 import { Fragment, useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { LogOut, Settings } from 'lucide-react';
 import {
   Dialog,
   DialogBackdrop,
@@ -15,6 +17,9 @@ import logo from '@/assets/images/logomeettrip.png';
 export default function Header() {
   const [open, setOpen] = useState(false);
 
+  const {auth} = usePage().props;
+
+  console.log(auth)
   return (
     <>
       {/* Mobile menu */}
@@ -39,18 +44,31 @@ export default function Header() {
               <Link href="/contact" className="block text-lg font-medium text-gray-900 hover:text-blue-600">Contact</Link>
 
               <div className="pt-6 border-t border-gray-200">
+                {auth.user ? (
                 <Link
-                  href={route('login')}
-                  className="block w-full text-center py-2 px-4 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 mb-2"
-                >
-                  Connexion
-                </Link>
-                <Link
-                  href={route('register')}
-                  className="block w-full text-center py-2 px-4 rounded-md bg-blue-700 text-white hover:bg-blue-800"
-                >
-                  Inscription
-                </Link>
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        className="block w-full text-center py-2 px-4 rounded-md bg-blue-700 text-white hover:bg-blue-800 mt-2"
+                      >
+                        <LogOut className="mr-2 inline" /> Déconnexion
+                      </Link>     ) :
+                (
+                  <>
+                    <Link
+                    href={route('login')}
+                    className="block w-full text-center py-2 px-4 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 mb-2"
+                    >
+                    Connexion
+                    </Link>
+                    <Link
+                    href={route('register')}
+                    className="block w-full text-center py-2 px-4 rounded-md bg-blue-700 text-white hover:bg-blue-800"
+                    >
+                    Inscription
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </DialogPanel>
@@ -78,18 +96,31 @@ export default function Header() {
 
           {/* Auth buttons */}
           <div className="hidden lg:flex items-center gap-4">
+            {auth.user ? (
+          <Link
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        className="block w-full text-center py-2 px-4 rounded-md bg-blue-700 text-white hover:bg-blue-800 mt-2"
+                      >
+                        <LogOut className="mr-2 inline" /> Déconnexion
+                      </Link>      ) :
+                (
+                  <>
             <Link
               href={route('login')}
               className="px-4 py-2 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200"
-            >
+              >
               Connexion
             </Link>
             <Link
               href={route('register')}
               className="px-4 py-2 rounded-md bg-blue-700 text-white hover:bg-blue-800"
-            >
+              >
               Inscription
             </Link>
+              </>
+          )}
           </div>
 
           {/* Mobile menu button */}
