@@ -14,6 +14,12 @@ Route::get('/activities', fn() => Inertia::render('PublicPages/Activities'))->na
 Route::get('/activities/{id}', fn($id) => Inertia::render('PublicPages/details-activities', ['id' => (int) $id]))->name('activity.details');
 
 // 👤 PAGES UTILISATEUR CONNECTÉ
+
+Route::get('/', function () {
+    return Inertia::render('home');
+})->name('home');
+
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('dashboard'))->name('dashboard');
     Route::get('/activitesconnected', fn() => Inertia::render('Activitiesconnected'))->name('activities.connected');
@@ -40,6 +46,37 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 });
 
 
-// 🔧 CONFIGURATION
+Route::get('/activities', function () {
+    return Inertia::render('activities');
+})->name('activities');
+
+
+Route::get('/activities/{id}', function ($id) {
+    return Inertia::render('details-activities', ['id' => (int) $id]);
+})->name('activity.details');
+
+Route::get('/about', function () {
+    return Inertia::render('about');
+})->name('about');
+
+Route::get('/contact', function () {
+    return Inertia::render('contact');
+})->name('contact');
+
+Route::get('/cgu', function () {
+    return Inertia::render('cgu');
+})->name('cgu');
+
+Route::get('/legal', function () {
+    return Inertia::render('legal');
+})->name('legal');
+
+Route::get('/privacy', function () {
+    return Inertia::render('privacy');
+})->name('privacy');
+
+
+
+
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

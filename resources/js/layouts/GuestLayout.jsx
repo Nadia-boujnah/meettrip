@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "../components/ui/footer";
-
+// import Footer from "@/components/Footer"; // << tu peux commenter ça pour l'instant
 
 export default function GuestLayout({ children }) {
   return (
