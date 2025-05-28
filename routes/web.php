@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivitiesController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -17,7 +18,7 @@ Route::get('/activities/{id}', fn($id) => Inertia::render('PublicPages/Details-a
 
 Route::middleware(['auth', 'verified', 'role:user'])->group(function () {
     Route::get('/dashboard/client', fn() => Inertia::render('Dashboard'))->name('user.dashboard');
-    Route::get('/activitesconnected', fn() => Inertia::render('Activitiesconnected'))->name('activities.connected');
+    Route::get('/activitesconnected', [ActivitiesController::class, 'index'])->name('activities.connected');
     Route::get('/activities/{id}/connected', fn($id) => Inertia::render('DetailsActivityConnected', ['id' => (int) $id]))->name('activity.details.connected');
     Route::get('/my-reservations', fn() => Inertia::render('MyReservations'))->name('my.reservations');
     Route::get('/messagerie', fn() => Inertia::render('Messagerie'))->name('messagerie');
@@ -27,19 +28,20 @@ Route::middleware(['auth', 'verified', 'role:user'])->group(function () {
     Route::get('/profil', fn() => Inertia::render('Profil'))->name('profil');
     Route::get('/profil/modifier', fn() => Inertia::render('EditProfil'))->name('edit.profil');
     Route::middleware(['auth'])->get('/organisateur/{id}', fn($id) => Inertia::render('ProfilOrganisateur', ['id' => (int) $id]))->name('organisateur.profil');
-
 });
 
 // 🔁 Redirection GLOBALE (en dehors de tout groupe)
 Route::redirect('/dashboard', '/admin/dashboard');
 
 // 🛠️ PAGES ADMINISTRATEUR
+use App\Http\Controllers\Admin\AdminActivitiesController;
+
 Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', fn() => Inertia::render('admin/AdminDashboard'))->name('admin.dashboard');
     Route::get('/admin/admin-organizers', fn() => Inertia::render('admin/AdminOrganizers'))->name('admin.organizers');
     Route::get('/admin/identity-validation', fn() => Inertia::render('admin/IdentityValidation'))->name('admin.identity.validation');
     Route::get('/admin/statistics', fn() => Inertia::render('admin/Statistics'))->name('admin.statistics');
-    Route::get('/admin/admin-activities', fn() => Inertia::render('admin/AdminActivities'))->name('admin.activities');
+    Route::get('/admin/admin-activities', [AdminActivitiesController::class, 'index'])->name('admin.activities');
 });
 
 

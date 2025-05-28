@@ -31,16 +31,16 @@ import jonasdoc from '@/assets/images/jonas-doc.png';
 
 export const allUsers = [
   {
-    id: 101,
-    prenom: 'Giulia',
-    nom: 'Romano',
-    photo: giulia,
-    bio: 'Nouvelle expatriée à Rome...',
-    location: 'Rome, Italie',
-    verifie: true,
-    document: giuliadoc,
-    inscription: '2024-07-15',
-    role: 'organisateur',
+    id: 101, // Deja fait
+    prenom: 'Giulia', // Rajouter une colonne
+    nom: 'Romano', // Deja fait
+    photo: giulia, // URL Varchar
+    bio: 'Nouvelle expatriée à Rome...', // Text
+    location: 'Rome, Italie', // Varchar
+    verifie: true, // Boolean
+    document: giuliadoc, // URL Varchar
+    inscription: '2024-07-15', // Déjà fait created_at
+    role: 'organisateur', // Deja fait
   },
   {
     id: 102,
