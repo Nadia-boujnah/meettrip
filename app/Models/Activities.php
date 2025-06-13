@@ -18,7 +18,9 @@ class Activities extends Model
         'longitude',
         'participants',
         'host_user_id',
+        'description',
         'dates',
+        'why',
     ];
 
     // Casts pour certains types (dates → json, latitude/longitude → float)

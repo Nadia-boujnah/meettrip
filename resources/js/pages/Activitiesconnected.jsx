@@ -1,12 +1,11 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { allActivities } from '@/data/activities';
 import ActivityCard from '@/components/ActivityCard'; 
 import ReservationModal from '@/components/ReservationModal';
 
 export default function Activitiesconnected() {
-  const { auth = {} } = usePage().props;
+  const { auth = {}, activities = [] } = usePage().props;
   const user = auth.user;
 
   const [search, setSearch] = useState('');
@@ -16,7 +15,7 @@ export default function Activitiesconnected() {
 
   const activitiesPerPage = 3;
 
-  const filteredActivities = allActivities.filter((activity) =>
+  const filteredActivities = activities.filter((activity) =>
     activity.title.toLowerCase().includes(search.toLowerCase()) ||
     activity.location.toLowerCase().includes(search.toLowerCase())
   );
@@ -66,14 +65,38 @@ export default function Activitiesconnected() {
         {/* Grille d'activités */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedActivities.map((activity) => (
-          <ActivityCard
-          key={activity.id}
-          activity={activity}
-          connected={true}
-          user={user} 
-          onReserve={handleReservation}
-        />
-
+            <div
+              key={activity.id}
+              className="bg-white rounded shadow overflow-hidden flex flex-col justify-between"
+            >
+              {activity.image && (
+                <img
+                  src={`/storage/${activity.image}`}
+                  alt={activity.title}
+                  className="w-full h-48 object-cover rounded-t"
+                />
+              )}
+              <div className="p-4 flex flex-col justify-between h-full">
+                <div>
+                  <h2 className="font-semibold text-lg">{activity.title}</h2>
+                  <p className="text-sm text-gray-600">
+                    {activity.location} – {activity.date}
+                  </p>
+                  <p className="text-sm mt-1">{activity.description}</p>
+                </div>
+                {activity.host_user && (
+                  <p className="text-sm text-gray-500 mt-4">
+                    Organisé par <span className="font-medium">{activity.host_user.prenom} {activity.host_user.nom}</span>
+                  </p>
+                )}
+                <button
+                  onClick={() => handleReservation(activity)}
+                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm"
+                >
+                  Réserver
+                </button>
+              </div>
+            </div>
           ))}
         </div>
 

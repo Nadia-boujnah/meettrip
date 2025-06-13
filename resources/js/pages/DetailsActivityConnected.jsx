@@ -1,14 +1,11 @@
 import AppLayout from '@/layouts/app-layout';
 import { usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import { allActivities } from '@/data/activities';
-import { allUsers } from '@/data/users'; 
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, startOfDay } from "date-fns";
 
 export default function DetailsActivityConnected() {
-  const { id } = usePage().props;
-  const activity = allActivities.find((a) => a.id === parseInt(id));
+  const { activity } = usePage().props;
 
   const [reserved, setReserved] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -23,13 +20,11 @@ export default function DetailsActivityConnected() {
     return startOfDay(new Date(`${year}-${month}-${day}`));
   });
 
-  const organizer = allUsers.find((u) => u.id === activity.host_user?.id);
-
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
         <img
-          src={activity.image}
+          src={`/storage/${activity.image}`}
           alt={activity.title}
           className="w-full h-64 object-cover rounded-lg"
         />
@@ -43,6 +38,7 @@ export default function DetailsActivityConnected() {
           <p className="text-gray-700">{activity.why}</p>
         </div>
 
+        {/* Dates disponibles */}
         {activity.dates?.length > 0 && (
           <div className="bg-gray-100 p-4 rounded-md">
             <h2 className="text-lg font-semibold mb-2">Dates disponibles</h2>
@@ -54,7 +50,7 @@ export default function DetailsActivityConnected() {
           </div>
         )}
 
-        {/* ✅ Modale calendrier */}
+        {/* Modale calendrier */}
         {showModal && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
@@ -100,30 +96,28 @@ export default function DetailsActivityConnected() {
           </div>
         )}
 
-        {/* ✅ Info organisateur */}
-        <div className="border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 shadow-sm mt-10">
+        {/* Info organisateur */}
+        <div className="border rounded-lg p-4 bg-gray-50 shadow-sm mt-10">
           <p className="text-sm text-gray-700">
             <span className="font-medium text-gray-900">Organisé par :</span>{' '}
-            {organizer ? (
+            {activity.host_user ? (
               <Link
-                href={route('organisateur.profil', { id: organizer.id })}
+                href={route('organisateur.profil', { id: activity.host_user.id })}
                 className="text-blue-600 hover:underline"
               >
-                {organizer.prenom} {organizer.nom}
+                {activity.host_user.prenom} {activity.host_user.nom}
               </Link>
             ) : (
               <span className="text-gray-500">Organisateur inconnu</span>
             )}
           </p>
 
-        <Link
-  href={`/messages/new?activite=${encodeURIComponent(activity.title)}&organisateur=${activity.host_user.id}`}
->
-  Envoyer un message
-</Link>
-
-
-
+          <Link
+            href={`/messages/new?activite=${encodeURIComponent(activity.title)}&organisateur=${activity.host_user?.id}`}
+            className="block mt-2 text-sm text-blue-500 hover:underline"
+          >
+            Envoyer un message
+          </Link>
         </div>
 
         <button
@@ -136,3 +130,5 @@ export default function DetailsActivityConnected() {
     </AppLayout>
   );
 }
+
+

@@ -1,11 +1,11 @@
 <?php
 
 namespace App\Models;
-
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -44,5 +44,17 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // ✅ Activités créées par cet utilisateur
+    public function hostedActivities(): HasMany
+    {
+        return $this->hasMany(Activities::class, 'host_user_id');
+    }
+
+    // ✅ Activités auxquelles cet utilisateur participe
+    public function joinedActivities(): BelongsToMany
+    {
+        return $this->belongsToMany(Activities::class, 'activity_user');
     }
 }
