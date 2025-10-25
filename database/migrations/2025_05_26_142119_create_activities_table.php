@@ -18,7 +18,7 @@ return new class extends Migration
             $table->double('longitude')->nullable(); // Coordonnée
             $table->double('latitude')->nullable();  // Coordonnée
             $table->unsignedInteger('participants')->default(0); // Nombre actuel de participants
-            $table->string('description'); // Description
+            $table->text('description'); // Description
             $table->string('why'); // Pourquoi participer ?
             $table->foreignIdFor(User::class, 'host_user_id') // Clé étrangère
                   ->nullable()

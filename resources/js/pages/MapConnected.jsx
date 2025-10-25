@@ -51,30 +51,40 @@ export default function MapConnected() {
             url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
           />
 
-          {filteredActivities.map((activity) => (
-            <Marker
-              key={activity.id}
-              position={activity.coordinates}
-              icon={L.icon({
-                iconUrl: markerIconPng,
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-              })}
-            >
-              <Popup>
-                <div className="text-sm space-y-1">
-                  <strong>{activity.title}</strong>
-                  <p>{activity.location}</p>
-                  <Link
-                    href={`/activities/${activity.id}/connected`}
-                    className="text-blue-600 underline"
-                  >
-                    Voir l’activité →
-                  </Link>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {filteredActivities.map((activity) => {
+            const coords = activity.coordinates;
+
+            // Vérifie si coords est bien un tableau [lat, lng]
+            if (!Array.isArray(coords) || coords.length !== 2 || 
+                typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
+              return null;
+            }
+
+            return (
+              <Marker
+                key={activity.id}
+                position={coords}
+                icon={L.icon({
+                  iconUrl: markerIconPng,
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41],
+                })}
+              >
+                <Popup>
+                  <div className="text-sm space-y-1">
+                    <strong>{activity.title}</strong>
+                    <p>{activity.location}</p>
+                    <Link
+                      href={`/activities/${activity.id}/connected`}
+                      className="text-blue-600 underline"
+                    >
+                      Voir l’activité →
+                    </Link>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
         </MapContainer>
       </div>
     </AppLayout>

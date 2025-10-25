@@ -1,2 +1,16 @@
+# robots.txt - MeetTrip
+# Contrôle de l'indexation des moteurs de recherche
+
 User-agent: *
-Disallow:
+# Autorise l’indexation du site public
+Allow: /
+
+# Interdit certaines routes internes ou sensibles
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /user/
+Disallow: /api/
+
+# Indique le sitemap du site
+Sitemap: https://meettrip.fr/sitemap.xml

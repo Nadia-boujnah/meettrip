@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 export default function Annonces() {
@@ -42,6 +42,20 @@ export default function Annonces() {
         setShowForm(false);
       },
     });
+  };
+
+  const handleDelete = (id) => {
+    if (confirm('Voulez-vous vraiment supprimer cette annonce ?')) {
+      router.delete(route('activities.destroy', id), {
+        onSuccess: () => {
+          setAnnonces((prev) => prev.filter((a) => a.id !== id));
+        },
+      });
+    }
+  };
+
+  const handleEdit = (id) => {
+    router.visit(route('activities.edit', id));
   };
 
   return (
@@ -132,7 +146,7 @@ export default function Annonces() {
               >
                 {annonce.image && (
                   <img
-                    src={`/storage/${annonce.image}`}
+                    src={annonce.image.startsWith('http') ? annonce.image : `/storage/${annonce.image}`}
                     alt={annonce.title}
                     className="w-full h-48 object-cover"
                   />
@@ -144,6 +158,22 @@ export default function Annonces() {
                       {annonce.location} – {annonce.date}
                     </p>
                     <p className="text-sm">{annonce.description}</p>
+                  </div>
+
+                  {/* Boutons Modifier / Supprimer */}
+                  <div className="flex justify-end mt-4 space-x-2">
+                    <button
+                      onClick={() => handleEdit(annonce.id)}
+                      className="text-blue-600 hover:underline text-sm"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      onClick={() => handleDelete(annonce.id)}
+                      className="text-red-600 hover:underline text-sm"
+                    >
+                      Supprimer
+                    </button>
                   </div>
                 </div>
               </div>

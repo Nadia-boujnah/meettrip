@@ -6,25 +6,35 @@ import { defineConfig } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
-const __dirname = path.dirname(__filename); // get the name of the directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-    plugins: [
-        laravel({
-            input: ['resources/css/app.css', 'resources/js/app.jsx'],
-            ssr: 'resources/js/ssr.jsx',
-            refresh: true,
-        }),
-        react(),
-        tailwindcss(),
-    ],
-    esbuild: {
-        jsx: 'automatic',
+  plugins: [
+    laravel({
+      input: ['resources/css/app.css', 'resources/js/app.jsx'],
+      ssr: 'resources/js/ssr.jsx',
+      refresh: true,
+    }),
+    react(),
+    tailwindcss(),
+  ],
+
+  esbuild: {
+    jsx: 'automatic',
+  },
+
+  resolve: {
+    alias: {
+      'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
     },
-    resolve: {
-        alias: {
-            'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
-        },
-    },
+  },
+
+  // ✅ Configuration du serveur Vite
+  server: {
+    host: '127.0.0.1',     // pour éviter les problèmes "localhost"
+    port: 5173,            // port fixe
+    strictPort: true,      // empêche Vite de changer de port
+    hmr: { host: '127.0.0.1' }, // Hot Module Replacement
+  },
 });
