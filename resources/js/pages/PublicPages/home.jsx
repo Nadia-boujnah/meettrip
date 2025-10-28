@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from '@inertiajs/react';
-import GuestLayout from '@/Layouts/GuestLayout';
+import GuestLayout from '@/layouts/GuestLayout';
 import fondbkp from '@/assets/videos/fondbkp.mp4';
 import rencontrEtLogo from "@/assets/images/rencontreetlogo.png";
 import repasParis from "@/assets/images/repasparis.png";

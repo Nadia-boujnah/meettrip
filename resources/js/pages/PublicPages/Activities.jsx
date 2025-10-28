@@ -1,4 +1,4 @@
-import GuestLayout from '@/Layouts/GuestLayout';
+import GuestLayout from '@/layouts/GuestLayout';
 import { useState } from 'react';
 import { allActivities } from '@/data/activities';
 import ActivityCard from '@/components/ActivityCard'; // ✅ On importe notre composant

@@ -1,4 +1,4 @@
-import GuestLayout from '@/Layouts/GuestLayout';
+import GuestLayout from '@/layouts/GuestLayout';
 import photoNadia from "@/assets/images/nadia-voyage.png";
 
 export default function About() {

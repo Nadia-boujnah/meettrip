@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/app-Layout';
+import AppLayout from '@/layouts/app-Layout';
 import { Head } from '@inertiajs/react';
 import { allUsers } from '@/data/users';
 import { Trash2, CheckCircle, AlertTriangle } from 'lucide-react';

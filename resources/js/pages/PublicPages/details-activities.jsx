@@ -1,4 +1,4 @@
-import GuestLayout from '@/Layouts/GuestLayout';
+import GuestLayout from '@/layouts/GuestLayout';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { allActivities } from '@/data/activities'; 

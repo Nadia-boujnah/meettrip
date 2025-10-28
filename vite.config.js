@@ -19,22 +19,17 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-
-  esbuild: {
-    jsx: 'automatic',
-  },
-
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'resources/js'),   
       'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
     },
   },
-
-  // ✅ Configuration du serveur Vite
   server: {
-    host: '127.0.0.1',     // pour éviter les problèmes "localhost"
-    port: 5173,            // port fixe
-    strictPort: true,      // empêche Vite de changer de port
-    hmr: { host: '127.0.0.1' }, // Hot Module Replacement
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    hmr: { host: '127.0.0.1' },
   },
 });
