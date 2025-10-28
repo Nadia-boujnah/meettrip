@@ -22,3 +22,16 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+# Ignorer toutes les vidéos lourdes
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+
+# ...SAUF la vidéo utilisée sur la page Home :
+!resources/assets/videos/fondbkp.mp4
+
+# Dossiers où il pourrait y avoir d'autres vidéos à ignorer
+resources/assets/videos/
+public/videos/
