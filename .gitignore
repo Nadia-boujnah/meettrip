@@ -22,3 +22,15 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+# Ignorer toutes les vidéos
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+
+# … SAUF celle utilisée sur la Home
+!resources/js/assets/videos/fondbkp.mp4
+
+# Dossier vidéos du front
+resources/js/assets/videos/
