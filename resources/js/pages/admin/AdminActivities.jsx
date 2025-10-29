@@ -1,4 +1,4 @@
-import AppLayout from '@/layouts/app-Layout';
+import AppLayout from '@/layouts/app-layout.jsx';
 import { Head } from '@inertiajs/react';
 import { allActivities } from '@/data/activities';
 import { Trash2 } from 'lucide-react';

@@ -1,4 +1,4 @@
-import AppLayout from '@/layouts/app-Layout';
+import AppLayout from '@/layouts/app-layout.jsx';
 import { Head } from '@inertiajs/react';
 import { allUsers } from '@/data/users';
 import { allActivities } from '@/data/activities';
