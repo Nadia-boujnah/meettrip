@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import GuestLayout from '@/Layouts/GuestLayout';
+import GuestLayout from '@/layouts/GuestLayout';
 
 export default function SeoExample() {
   return (

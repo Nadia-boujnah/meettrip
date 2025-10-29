@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/app-Layout';
+import AppLayout from '@/layouts/app-layout.jsx';
 import { Head } from '@inertiajs/react';
 import {
   Chart as ChartJS,
