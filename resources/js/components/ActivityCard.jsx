@@ -1,15 +1,28 @@
 import { Link } from '@inertiajs/react';
 
-export default function ActivityCard({ activity, connected = false, user = null, onReserve }) {
-  const isLoggedIn = !!user;
+// Import automatique des images locales
+const images = import.meta.glob('@/assets/images/*', { eager: true });
+const resolveImg = (name) => {
+  if (!name) return null;
+  const key = `/resources/js/assets/images/${name}`;
+  return images[key]?.default ?? null;
+};
+
+export default function ActivityCard({ activity }) {
+  const imageSrc = resolveImg(activity.image) || '/images/placeholder.jpg';
 
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
-      <img src={activity.image} alt={activity.title} className="h-48 w-full object-cover" />
+      <img
+        src={imageSrc}
+        alt={activity.title}
+        className="h-48 w-full object-cover"
+      />
       <div className="p-4 space-y-2">
         <p className="text-sm text-gray-500">
           {activity.participants} participant{activity.participants > 1 ? 's' : ''}
         </p>
+
         <h2 className="font-semibold text-lg">{activity.title}</h2>
         <p className="text-sm text-gray-600">{activity.location}</p>
 
@@ -23,11 +36,7 @@ export default function ActivityCard({ activity, connected = false, user = null,
           <p className="text-sm text-gray-700">
             Organisé par{' '}
             <Link
-              href={
-                isLoggedIn
-                  ? route('organisateur.profil', { id: activity.host_user.id })
-                  : '/login'
-              }
+              href={route('organisateur.profil', { id: activity.host_user.id })}
               className="text-blue-600 hover:underline"
             >
               {activity.host_user.name}
@@ -35,12 +44,12 @@ export default function ActivityCard({ activity, connected = false, user = null,
           </p>
         )}
 
-        {/* 👇 Bouton voir plus vers DetailsActivityConnected */}
+        {/* 👇 Bouton redirection vers la page détail */}
         <Link
-          href={route('activity.details.connected', { id: activity.id })}
-          className="block mt-2 text-center bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-sm transition"
+          href={route('activity.details', { id: activity.id })}
+          className="block mt-2 text-center bg-[#247BA0] hover:bg-[#3498DB] text-white py-2 rounded text-sm transition"
         >
-          Voir plus
+          En savoir plus
         </Link>
       </div>
     </div>

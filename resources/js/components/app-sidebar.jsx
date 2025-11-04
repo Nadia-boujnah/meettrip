@@ -30,7 +30,7 @@ const mainNavItems = [
   { title: 'Activités', url: '/activitesconnected', icon: Handshake },
   { title: 'Mes réservations', url: '/my-reservations', icon: CalendarCheck },
   { title: 'Carte', url: '/carte', icon: Map },
-  { title: 'Messagerie', url: '/messagerie', icon: Mail, badge: 2 },
+  { title: 'Messagerie', url: '/messagerie', icon: Mail },
   { title: 'Annonces', url: '/annonces', icon: Newspaper },
 ];
 

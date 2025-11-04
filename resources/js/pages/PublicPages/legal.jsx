@@ -19,14 +19,16 @@ export default function LegalNotice() {
             <p>Nadia B., fondatrice de MeetTrip – contact via la page de contact.</p>
           </div>
 
-          <div>
-            <h2 className="font-semibold mb-2 text-[#247BA0]">Hébergement</h2>
-            <p>
-              Ce site est hébergé par : <br />
-              <strong>Hostinger International Ltd</strong><br />
-              61 Lordou Vironos Street, 6023 Larnaca, Chypre
-            </p>
-          </div>
+         <div>
+  <h2 className="font-semibold mb-2 text-[#247BA0]">Hébergement</h2>
+  <p>
+    Le site MeetTrip est actuellement en <strong>phase de développement</strong> et fonctionne en environnement local
+    (serveur Laravel). <br />
+    Le déploiement final sera effectué via <strong>Docker</strong>, reproduisant un environnement de production
+    complet, avant une mise en ligne sur un hébergeur à définir (ex. Hostinger, OVH, ou AWS).
+  </p>
+</div>
+
 
           <div>
             <h2 className="font-semibold mb-2 text-[#247BA0]">Propriété intellectuelle</h2>

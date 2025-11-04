@@ -1,161 +1,208 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
-import { allActivities } from '@/data/activities';
+import { Head, Link, usePage, router } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
+import { resolveAssetImage } from '@/utils/resolveAssetImage';
+import SuccessDialog from '@/components/SuccessDialog';
+
+
 
 export default function Messagerie() {
-  const [search, setSearch] = useState('');
-  const [showComposer, setShowComposer] = useState(false);
+  const { threads = [], contactId = null, activityContext = null } = usePage().props;
+
+  const [showComposer, setShowComposer] = useState(!!contactId || !!activityContext);
   const [newMessageText, setNewMessageText] = useState('');
-  const [selectedOrganizerId, setSelectedOrganizerId] = useState(null);
 
-  const rawConversations = [
-    {
-      activityId: 4,
-      lastMessage: "Bonjour, j’ai réservé votre activité, avez-vous besoin que j’apporte quelque chose ?",
-      date: '16-05-2025',
-      read: false,
-    },
-    {
-      activityId: 2,
-      lastMessage: "Bonjour Marc, merci pour la validation ! Dois-je prévoir quelque chose pour l’excursion ?",
-      date: '15-05-2025',
-      read: true,
-    },
-  ];
-
-  const conversations = rawConversations.map((conv, index) => {
-    const activity = allActivities.find((a) => a.id === conv.activityId);
-    return {
-      id: index + 1,
-      activityTitle: activity.title,
-      activityImage: activity.image,
-      organizer: activity.host_user,
-      location: activity.location,
-      lastMessage: conv.lastMessage,
-      date: conv.date,
-      read: conv.read,
-    };
-  });
-
-  const filteredConversations = conversations.filter((c) =>
-    c.organizer.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.activityTitle.toLowerCase().includes(search.toLowerCase()) ||
-    c.location.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const allOrganizers = Array.from(
-    new Map(allActivities.map((a) => [a.host_user.id, a.host_user])).values()
-  );
+  const fullName = (u) => {
+    if (!u) return '';
+    const f = u.prenom || u.name || '';
+    const l = u.nom || '';
+    return `${f} ${l}`.trim();
+  };
+  const imgFrom = (file) => (file ? resolveAssetImage(file) : null);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!selectedOrganizerId || !newMessageText.trim()) return;
-    alert(`Message envoyé à ${allOrganizers.find(o => o.id === parseInt(selectedOrganizerId)).name} :\n"${newMessageText}"`);
-    setNewMessageText('');
-    setSelectedOrganizerId(null);
-    setShowComposer(false);
+    if (!contactId || !newMessageText.trim()) return;
+
+    router.post(
+      (typeof route === 'function' ? route('messages.store') : '/messages'),
+      {
+        contact_id: contactId,
+        activity_id: activityContext?.id ?? null,
+        body: newMessageText.trim(),
+      },
+      {
+        onSuccess: () => {
+          setNewMessageText('');
+          setShowComposer(false);
+          // Inertia suit la redirection backend vers /messages/{id}
+        },
+      }
+    );
   };
 
   return (
     <AppLayout>
       <Head title="Messagerie" />
-      <div className="p-6 space-y-6">
+
+      <div className="p-6 space-y-6 max-w-5xl mx-auto">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Messagerie</h1>
-          <button
-            onClick={() => setShowComposer(!showComposer)}
-            className="bg-blue-500 text-white px-4 py-2 text-sm rounded hover:bg-blue-600"
+          <Link
+            href={typeof route === 'function' ? route('activities.connected') : '/activitesconnected'}
+            className="text-sm text-blue-600 hover:underline"
           >
-            Nouveau message
-          </button>
+            ← Retour aux activités
+          </Link>
         </div>
 
-        {/* 🔍 Barre de recherche améliorée */}
-        <input
-          type="text"
-          placeholder="Rechercher par activité, organisateur, ville ou pays..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm border border-gray-300 px-4 py-2 rounded text-sm"
-        />
+        {/* ==== Liste des conversations ==== */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">Vos conversations</h2>
 
-        {/* 💬 Liste des conversations */}
-        <ul className="space-y-0 border rounded-md overflow-hidden">
-          {filteredConversations.length === 0 ? (
-            <p className="text-sm text-gray-500 p-4">Aucune conversation trouvée.</p>
+          {threads.length === 0 ? (
+            <p className="text-sm text-gray-500">Aucune conversation pour le moment.</p>
           ) : (
-            filteredConversations.map((conv) => (
-              <li
-                key={conv.id}
-                className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition border-b last:border-none"
-              >
-                <img
-                  src={conv.activityImage}
-                  alt={conv.activityTitle}
-                  className="w-16 h-16 object-cover rounded-md flex-shrink-0"
-                />
-                <Link
-                  href={`/messages/${conv.id}`}
-                  className="flex-1 flex flex-col justify-center"
-                >
-                  <div className="flex justify-between items-center">
-                    <p className="font-semibold">{conv.organizer.name}</p>
-                    <span className="text-xs text-gray-400">{conv.date}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 italic">
-                    {conv.activityTitle}
-                  </p>
-                  <p className="text-sm text-gray-800 truncate mt-1">
-                    {conv.lastMessage}
-                  </p>
-                </Link>
-                {!conv.read && (
-                  <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                    Non lu
-                  </span>
-                )}
-              </li>
-            ))
+            <ul className="border rounded-md overflow-hidden divide-y">
+              {threads.map((t) => {
+                const displayName = fullName(t.other) || `Utilisateur #${t.other?.id}`;
+                const cover = imgFrom(t.activity?.image);
+                const subtitle = t.activity
+                  ? `${t.activity.title} — ${t.activity.location}`
+                  : `Conversation générale`;
+
+                return (
+                  <li
+  key={t.id}
+  className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 transition border-b last:border-none"
+>
+  {/* Image activité */}
+  {cover ? (
+    <img
+      src={cover}
+      alt={t.activity?.title || 'Activité'}
+      className="w-14 h-14 rounded object-cover"
+    />
+  ) : (
+    <div className="w-14 h-14 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+      Sans image
+    </div>
+  )}
+
+  {/* Texte cliquable */}
+  <Link
+    href={typeof route === 'function' ? route('messages.show', t.id) : `/messages/${t.id}`}
+    className="flex-1"
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <p className="font-medium">{displayName}</p>
+        {t.unread && (
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white">
+            Non lu
+          </span>
+        )}
+      </div>
+      {t.last_message_at && (
+        <span className="text-xs text-gray-400">
+          {new Date(t.last_message_at).toLocaleString('fr-FR')}
+        </span>
+      )}
+    </div>
+    <p className="text-sm text-gray-600">{subtitle}</p>
+  </Link>
+
+ {/* Actions rapides */}
+<div className="flex items-center gap-2">
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      if (!confirm('Supprimer cette conversation ?')) return;
+      router.delete(
+        typeof route === 'function' ? route('messages.destroy', t.id) : `/messages/${t.id}`,
+        { preserveScroll: true }
+      );
+    }}
+    className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50"
+    title="Supprimer"
+  >
+    Supprimer
+  </button>
+</div>
+
+</li>
+
+                );
+              })}
+            </ul>
           )}
-        </ul>
+        </section>
 
-        {/* ✉️ Nouveau message */}
-        {showComposer && (
-          <form
-            onSubmit={handleSendMessage}
-            className="p-4 border rounded-xl bg-gray-50 space-y-4"
-          >
-            <h2 className="text-lg font-semibold">Envoyer un message</h2>
+        {/* ==== Composer ciblé (si tu viens d’une activité) ==== */}
+        {(contactId || activityContext) && (
+          <section className="p-4 border rounded-xl bg-gray-50 space-y-3">
+            <h2 className="text-lg font-semibold">Nouveau message</h2>
 
-            <select
-              value={selectedOrganizerId || ''}
-              onChange={(e) => setSelectedOrganizerId(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm"
-            >
-              <option value="">Choisir un organisateur</option>
-              {allOrganizers.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </select>
+            {activityContext && (
+              <div className="flex items-start gap-4 p-3 border rounded bg-white">
+                {activityContext.image && (
+                  <img
+                    src={imgFrom(activityContext.image)}
+                    alt={activityContext.title}
+                    className="w-16 h-16 rounded object-cover"
+                  />
+                )}
+                <div>
+                  <p className="text-sm text-gray-500">À propos de :</p>
+                  <p className="font-medium">{activityContext.title}</p>
+                  <p className="text-sm text-gray-600">{activityContext.location}</p>
+                  {activityContext.host && (
+                    <p className="text-sm mt-1">
+                      Organisateur : <span className="font-medium">{fullName(activityContext.host)}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
-            <textarea
-              rows={3}
-              value={newMessageText}
-              onChange={(e) => setNewMessageText(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm"
-              placeholder="Votre message..."
-            ></textarea>
+            <form onSubmit={handleSendMessage} className="space-y-2">
+              <div className="text-sm text-gray-600">
+                À :{' '}
+                <span className="font-medium">
+                  {activityContext?.host
+                    ? fullName(activityContext.host)
+                    : contactId
+                    ? `Utilisateur #${contactId}`
+                    : '—'}
+                </span>
+              </div>
 
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm"
-            >
-              Envoyer
-            </button>
-          </form>
+              <textarea
+                rows={4}
+                value={newMessageText}
+                onChange={(e) => setNewMessageText(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm"
+                placeholder="Votre message..."
+              ></textarea>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+                  disabled={!newMessageText.trim() || !contactId}
+                >
+                  Envoyer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowComposer(false)}
+                  className="text-sm text-gray-500 hover:underline"
+                >
+                  Fermer
+                </button>
+              </div>
+            </form>
+          </section>
         )}
       </div>
     </AppLayout>

@@ -1,8 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import ActivityCard from '@/components/ActivityCard'; 
 import ReservationModal from '@/components/ReservationModal';
+import { resolveAssetImage } from '@/utils/resolveAssetImage';
 
 export default function Activitiesconnected() {
   const { auth = {}, activities = [] } = usePage().props;
@@ -16,11 +16,11 @@ export default function Activitiesconnected() {
   const activitiesPerPage = 3;
 
   const filteredActivities = activities.filter((activity) =>
-    activity.title.toLowerCase().includes(search.toLowerCase()) ||
-    activity.location.toLowerCase().includes(search.toLowerCase())
+    (activity.title || '').toLowerCase().includes(search.toLowerCase()) ||
+    (activity.location || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage);
+  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage) || 1;
   const startIndex = (currentPage - 1) * activitiesPerPage;
   const paginatedActivities = filteredActivities.slice(startIndex, startIndex + activitiesPerPage);
 
@@ -64,40 +64,70 @@ export default function Activitiesconnected() {
 
         {/* Grille d'activités */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedActivities.map((activity) => (
-            <div
-              key={activity.id}
-              className="bg-white rounded shadow overflow-hidden flex flex-col justify-between"
-            >
-              {activity.image && (
-                <img
-                  src={`/storage/${activity.image}`}
-                  alt={activity.title}
-                  className="w-full h-48 object-cover rounded-t"
-                />
-              )}
-              <div className="p-4 flex flex-col justify-between h-full">
-                <div>
-                  <h2 className="font-semibold text-lg">{activity.title}</h2>
-                  <p className="text-sm text-gray-600">
-                    {activity.location} – {activity.date}
-                  </p>
-                  <p className="text-sm mt-1">{activity.description}</p>
-                </div>
-                {activity.host_user && (
-                  <p className="text-sm text-gray-500 mt-4">
-                    Organisé par <span className="font-medium">{activity.host_user.prenom} {activity.host_user.nom}</span>
-                  </p>
+          {paginatedActivities.map((activity) => {
+            // Image depuis resources/js/assets (et sous-dossiers)
+            const img = resolveAssetImage(activity.image);
+            // Nom organisateur (fallback sur name si pas de prenom/nom)
+            const hostFirst = activity?.host_user?.prenom || activity?.host_user?.name || '';
+            const hostLast = activity?.host_user?.nom || '';
+            const hostId = activity?.host_user?.id;
+
+            return (
+              <div
+                key={activity.id}
+                className="bg-white rounded shadow overflow-hidden flex flex-col justify-between"
+              >
+                {img && (
+                  <img
+                    src={img}
+                    alt={activity.title}
+                    className="w-full h-48 object-cover rounded-t"
+                  />
                 )}
-                <button
-                  onClick={() => handleReservation(activity)}
-                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm"
-                >
-                  Réserver
-                </button>
+
+                <div className="p-4 flex flex-col justify-between h-full">
+                  <div>
+                    <h2 className="font-semibold text-lg">{activity.title}</h2>
+                    <p className="text-sm text-gray-600">
+                      {activity.location} {activity.date ? `– ${activity.date}` : ''}
+                    </p>
+                    <p className="text-sm mt-1">{activity.description}</p>
+
+                    {/* Nombre de participants */}
+                    {typeof activity.participants !== 'undefined' && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        <span className="font-medium">{activity.participants}</span>{' '}
+                        participant{activity.participants > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Lien organisateur -> messagerie avec contexte activité */}
+                  {(hostFirst || hostLast) && hostId && (
+                    <p className="text-sm text-gray-500 mt-4">
+                      Organisé par{' '}
+                      <Link
+                        href={typeof route === 'function'
+                          ? route('messagerie.user.activity', [hostId, activity.id])
+                          : `/messagerie/${hostId}/${activity.id}`
+                        }
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        {hostFirst} {hostLast}
+                      </Link>
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => handleReservation(activity)}
+                    className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm"
+                  >
+                    Réserver
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Pagination */}

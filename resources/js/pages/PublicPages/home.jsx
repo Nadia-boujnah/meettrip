@@ -1,31 +1,58 @@
 import { motion } from 'framer-motion';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import GuestLayout from '@/layouts/GuestLayout';
 import fondbkp from '@/assets/videos/fondbkp.mp4';
 import rencontrEtLogo from "@/assets/images/rencontreetlogo.png";
 import repasParis from "@/assets/images/repasparis.png";
-import visiteEspagne from "@/assets/images/visiteespagne.png";
-import trajetAustralie from "@/assets/images/trajetaustralie.png";
-import randoneeMontagne from "@/assets/images/randoneemontagne.png";
 
 // Carte Leaflet
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import markerIconPng from 'leaflet/dist/images/marker-icon.png';
-import { allActivities } from '@/data/activities';
+// import { allActivities } from '@/data/activities'; // (gardé en référence, plus utilisé)
+
+const images = import.meta.glob('@/assets/images/*', { eager: true });
+const resolveImg = (name) => {
+  if (!name) return null;
+  const key = `/resources/js/assets/images/${name}`;
+  return images[key]?.default ?? null;
+};
 
 export default function Home() {
   // --- État & centre de la carte (JS, sans types) ---
   const center = [48.8566, 2.3522]; // Paris
   const [search, setSearch] = useState('');
 
-  const filteredActivities = allActivities.filter((a) =>
-    a.title.toLowerCase().includes(search.toLowerCase()) ||
-    a.location.toLowerCase().includes(search.toLowerCase()) ||
-    a.host_user.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Props envoyées par Inertia depuis web.php
+  const { latestActivities = [], mapActivities = [] } = usePage().props;
+
+  // Filtrage commun par recherche (titre / lieu) pour carte + 4 cartes
+  const filteredMap = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return mapActivities;
+    return mapActivities.filter(a =>
+      (a.title || '').toLowerCase().includes(q) ||
+      (a.location || '').toLowerCase().includes(q)
+    );
+  }, [mapActivities, search]);
+
+  const filteredLatest = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return latestActivities;
+    return latestActivities.filter(a =>
+      (a.title || '').toLowerCase().includes(q) ||
+      (a.location || '').toLowerCase().includes(q)
+    );
+  }, [latestActivities, search]);
+
+  // Ancien filtrage en dur (conservé en commentaire pour référence)
+  // const filteredActivities = allActivities.filter((a) =>
+  //   a.title.toLowerCase().includes(search.toLowerCase()) ||
+  //   a.location.toLowerCase().includes(search.toLowerCase()) ||
+  //   a.host_user.name.toLowerCase().includes(search.toLowerCase())
+  // );
 
   return (
     <GuestLayout>
@@ -181,31 +208,29 @@ export default function Home() {
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.2 } } }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
-            {/* 4 cartes exemples */}
-            {[
-              {img:repasParis, title:'Dîner entre voyageurs', place:'Paris, FRANCE', desc:'Rejoignez-nous pour un dîner convivial !'},
-              {img:visiteEspagne, title:'Visite du centre-ville', place:'Barcelone, ESPAGNE', desc:'Explorez Barcelone avec nous !'},
-              {img:trajetAustralie, title:'Covoiturage vers Sydney', place:'Melbourne, AUSTRALIE', desc:'Proposez une place pour un trip'},
-              {img:randoneeMontagne, title:'Randonnée en montagne', place:'Chamonix, FRANCE', desc:'Découvrons ensemble les Alpes'},
-            ].map((c,i)=>(
-              <motion.div key={i}
-                variants={{ hidden:{opacity:0,scale:0.9}, visible:{opacity:1,scale:1} }}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
-              >
-                <img src={c.img} alt={c.title} className="h-48 w-full object-cover" />
-                <div className="p-4">
-                  <h3 className="font-bold mb-1">{c.title}</h3>
-                  <p className="text-sm text-blue-600 mb-2">{c.place}</p>
-                  <p className="text-sm mb-4">{c.desc}</p>
-                  <Link
-                    href="/activities#activites"
-                    className="block w-full bg-[#247BA0] text-white text-center py-2 rounded-md hover:bg-[#3498DB] transition"
-                  >
-                    Voir plus
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
+            {/* 4 cartes depuis la BDD */}
+            {filteredLatest.slice(0, 4).map((a, i) => {
+              const img = resolveImg(a.image) || repasParis; // fallback doux
+              return (
+                <motion.div key={a.id ?? i}
+                  variants={{ hidden:{opacity:0,scale:0.9}, visible:{opacity:1,scale:1} }}
+                  className="bg-white rounded-lg shadow-md overflow-hidden"
+                >
+                  <img src={img} alt={a.title} className="h-48 w-full object-cover" />
+                  <div className="p-4">
+                    <h3 className="font-bold mb-1">{a.title}</h3>
+                    <p className="text-sm text-blue-600 mb-2">{a.location}</p>
+                    {a.description && <p className="text-sm mb-4 line-clamp-2">{a.description}</p>}
+                    <Link
+                      href={route('activity.details', { id: a.id })}
+                      className="block w-full bg-[#247BA0] text-white text-center py-2 rounded-md hover:bg-[#3498DB] transition"
+                    >
+                      Voir plus
+                    </Link>
+                  </div>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </section>
 
@@ -262,15 +287,11 @@ export default function Home() {
                   url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
                 />
 
-                {filteredActivities.map((activity) => {
-                  const coords = activity.coordinates;
-                  if (!Array.isArray(coords) || coords.length !== 2 || typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
-                    return null;
-                  }
-                  return (
+                {filteredMap.map((a) => (
+                  (typeof a.lat === 'number' && typeof a.lng === 'number') && (
                     <Marker
-                      key={activity.id}
-                      position={coords}
+                      key={a.id}
+                      position={[a.lat, a.lng]}
                       icon={L.icon({
                         iconUrl: markerIconPng,
                         iconSize: [25, 41],
@@ -279,16 +300,23 @@ export default function Home() {
                     >
                       <Popup>
                         <div className="text-sm space-y-1">
-                          <strong>{activity.title}</strong>
-                          <p>{activity.location}</p>
-                          <Link href={`/activities/${activity.id}/connected`} className="text-blue-600 underline">
+                          <strong>{a.title}</strong>
+                          <p className="text-gray-600">{a.location}</p>
+                          {resolveImg(a.image) && (
+                            <img
+                              src={resolveImg(a.image)}
+                              alt={a.title}
+                              className="rounded w-48 h-28 object-cover"
+                            />
+                          )}
+                          <Link href={route('activity.details', { id: a.id })} className="text-blue-600 underline">
                             Voir l’activité →
                           </Link>
                         </div>
                       </Popup>
                     </Marker>
-                  );
-                })}
+                  )
+                ))}
               </MapContainer>
             </div>
           </motion.div>
@@ -388,4 +416,3 @@ export default function Home() {
 </GuestLayout>
 );
 }
-

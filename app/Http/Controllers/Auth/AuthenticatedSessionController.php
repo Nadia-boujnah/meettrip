@@ -14,7 +14,7 @@ use Inertia\Response;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Show the login page.
+     * Affiche la page de connexion.
      */
     public function create(Request $request): Response
     {
@@ -25,26 +25,40 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Traite la soumission du formulaire de connexion.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // Valide + tente l'auth (via LoginRequest)
         $request->authenticate();
 
+        // Régénère la session
         $request->session()->regenerate();
 
         $user = Auth::user();
 
-
-        if ($user->role == "admin") {
-            return redirect()->intended(route('admin.dashboard', absolute: false));
+        // Redirection par rôle
+        if ($user && $user->role === 'admin') {
+            // admin -> dashboard admin
+            return redirect()->intended(
+                Route::has('admin.dashboard') ? route('admin.dashboard') : '/admin/dashboard'
+            );
         }
 
-        return redirect()->intended(route('user.dashboard', absolute: false));
+        // user classique -> Dashboard (nom de route variable selon ton projet)
+        if (Route::has('Dashboard')) {
+            return redirect()->intended(route('Dashboard'));
+        }
+        if (Route::has('dashboard')) {
+            return redirect()->intended(route('dashboard'));
+        }
+
+        // Fallback si aucune route nommée n'existe
+        return redirect()->intended('/dashboard');
     }
 
     /**
-     * Destroy an authenticated session.
+     * Déconnecte l'utilisateur.
      */
     public function destroy(Request $request): RedirectResponse
     {

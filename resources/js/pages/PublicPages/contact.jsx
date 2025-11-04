@@ -7,7 +7,7 @@ export default function Contact() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setSent(true);
-    setTimeout(() => setSent(false), 4000); // cache après 4 secondes
+    setTimeout(() => setSent(false), 4000); 
   };
 
   return (

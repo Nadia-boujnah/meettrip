@@ -1,27 +1,22 @@
 import GuestLayout from '@/layouts/GuestLayout';
-import { useState } from 'react';
-import { allActivities } from '@/data/activities';
-import ActivityCard from '@/components/ActivityCard'; // ✅ On importe notre composant
+import { usePage, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
+import ActivityCard from '@/components/ActivityCard';
 
 export default function Activities() {
+  const { activities } = usePage().props;      // ← vient de la route
+  const items = activities?.data ?? [];        // tableau paginé (Laravel)
   const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const activitiesPerPage = 3;
 
-  const filteredActivities = allActivities.filter((activity) =>
-    activity.title.toLowerCase().includes(search.toLowerCase()) ||
-    activity.location.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage);
-  const startIndex = (currentPage - 1) * activitiesPerPage;
-  const paginatedActivities = filteredActivities.slice(startIndex, startIndex + activitiesPerPage);
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
+  // Filtre côté client (simple et instantané)
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((a) =>
+      (a.title || '').toLowerCase().includes(q) ||
+      (a.location || '').toLowerCase().includes(q)
+    );
+  }, [items, search]);
 
   return (
     <GuestLayout>
@@ -34,10 +29,7 @@ export default function Activities() {
             type="text"
             placeholder="Rechercher une activité..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full md:w-1/3 border border-gray-300 rounded-md px-4 py-2"
           />
           <select className="w-full md:w-auto border border-gray-300 rounded-md px-4 py-2">
@@ -48,43 +40,36 @@ export default function Activities() {
           </select>
         </div>
 
-        {/* Grille d'activités */}
+        {/* Grille d'activités (depuis la BDD) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedActivities.map((activity) => (
+          {filtered.map((activity) => (
             <ActivityCard key={activity.id} activity={activity} />
           ))}
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+        {/* Pagination serveur (liens Laravel) */}
+        {activities?.links?.length > 0 && (
           <div className="flex justify-center mt-10 space-x-2 text-sm font-medium">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 rounded ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'hover:underline'}`}
-            >
-              ← Précédent
-            </button>
+           {activities.links.map((link, i) => {
+  // 📝 Traduction du texte des boutons Laravel
+  const label =
+    link.label.includes('Previous') ? 'Précédent' :
+    link.label.includes('Next') ? 'Suivant' :
+    link.label;
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => goToPage(page)}
-                className={`px-3 py-1 rounded ${
-                  page === currentPage ? 'bg-black text-white' : 'text-black hover:underline'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+  return (
+    <Link
+      key={i}
+      href={link.url || '#'}
+      preserveScroll
+      className={`px-3 py-1 rounded ${
+        link.active ? 'bg-black text-white' : 'hover:underline text-black'
+      } ${!link.url ? 'pointer-events-none text-gray-400' : ''}`}
+      dangerouslySetInnerHTML={{ __html: label }}
+    />
+  );
+})}
 
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 rounded ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'hover:underline'}`}
-            >
-              Suivant →
-            </button>
           </div>
         )}
       </div>
