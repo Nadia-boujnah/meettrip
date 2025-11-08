@@ -1,21 +1,55 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { allActivities } from '@/data/activities';
+import { allActivities } from '@/data/activities';   // ⬅️ conservé (fallback)
 import L from 'leaflet';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';     // ⬅️ usePage ajouté
 import markerIconPng from 'leaflet/dist/images/marker-icon.png';
 import AppLayout from '@/layouts/app-layout';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function MapConnected() {
   const center = [48.8566, 2.3522]; 
   const [search, setSearch] = useState('');
 
-  const filteredActivities = allActivities.filter((a) =>
-    a.title.toLowerCase().includes(search.toLowerCase()) ||
-    a.location.toLowerCase().includes(search.toLowerCase()) ||
-    a.host_user.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // ⬇ on lit les vraies données envoyées par le back (si présentes)
+  const { mapActivities = [] } = usePage().props;
+
+  // ⬇ source de données pour la carte :
+  //    - si le back a fourni mapActivities (avec lat/lng) on l'utilise
+  //    - sinon, on retombe sur allActivities (tes données en dur) sans rien casser
+  const points = useMemo(() => {
+    if (Array.isArray(mapActivities) && mapActivities.length > 0) {
+      return mapActivities.map(a => ({
+        id: a.id,
+        title: a.title,
+        location: a.location,
+        lat: typeof a.lat === 'number' ? a.lat : (typeof a.latitude === 'number' ? a.latitude : null),
+        lng: typeof a.lng === 'number' ? a.lng : (typeof a.longitude === 'number' ? a.longitude : null),
+        image_url: a.image_url ?? null,
+      }));
+    }
+    // fallback: on convertit tes anciennes données [lat,lng] => {lat,lng}
+    return allActivities.map(a => ({
+      id: a.id,
+      title: a.title,
+      location: a.location,
+      lat: Array.isArray(a.coordinates) ? a.coordinates[0] : null,
+      lng: Array.isArray(a.coordinates) ? a.coordinates[1] : null,
+      image_url: null,
+      host_user: a.host_user,
+    }));
+  }, [mapActivities]);
+
+  // ⬇ filtre (titre/lieu/organisateur si fallback)
+  const filteredActivities = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return points.filter((a) => {
+      const inTitle = (a.title || '').toLowerCase().includes(q);
+      const inLoc   = (a.location || '').toLowerCase().includes(q);
+      const inHost  = (a.host_user?.name || '').toLowerCase().includes(q);
+      return inTitle || inLoc || inHost;
+    });
+  }, [points, search]);
 
   return (
     <AppLayout>
@@ -52,18 +86,14 @@ export default function MapConnected() {
           />
 
           {filteredActivities.map((activity) => {
-            const coords = activity.coordinates;
-
-            // Vérifie si coords est bien un tableau [lat, lng]
-            if (!Array.isArray(coords) || coords.length !== 2 || 
-                typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
-              return null;
-            }
+            const lat = activity.lat;
+            const lng = activity.lng;
+            if (typeof lat !== 'number' || typeof lng !== 'number') return null;
 
             return (
               <Marker
                 key={activity.id}
-                position={coords}
+                position={[lat, lng]}
                 icon={L.icon({
                   iconUrl: markerIconPng,
                   iconSize: [25, 41],
@@ -74,6 +104,13 @@ export default function MapConnected() {
                   <div className="text-sm space-y-1">
                     <strong>{activity.title}</strong>
                     <p>{activity.location}</p>
+                    {activity.image_url && (
+                      <img
+                        src={activity.image_url}
+                        alt={activity.title}
+                        className="rounded w-48 h-28 object-cover"
+                      />
+                    )}
                     <Link
                       href={`/activities/${activity.id}/connected`}
                       className="text-blue-600 underline"

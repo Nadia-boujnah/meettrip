@@ -4,17 +4,52 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 
-// CONTROLLERS
-use App\Http\Controllers\Admin\AdminActivitiesController;
-use App\Http\Controllers\ActivitiesConnectedController;
-use App\Models\Activities;
+// PUBLIC CONTROLLERS
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\CitiesController;
+
+// FEATURE CONTROLLERS
+use App\Http\Controllers\AnnoncesController;
+use App\Http\Controllers\ActivitiesConnectedController;
+use App\Http\Controllers\ReservationsController;
 use App\Http\Controllers\ConversationsController;
 use App\Http\Controllers\MessagesController;
+use App\Http\Controllers\Admin\AdminActivitiesController;
+use App\Http\Controllers\DashboardClientController;
+
+// AUTH CONTROLLERS (important: pour /login /register)
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+
+// MODELS
+use App\Models\Activities;
 
 /*
-| PAGES PUBLIQUES
+|--------------------------------------------------------------------------
+| AUTH (toujours côté invités)
+|--------------------------------------------------------------------------
+| Ces routes ne doivent JAMAIS être protégées par 'auth' ou autre rôle.
 */
+Route::middleware('guest')->group(function () {
+    Route::get('/login',    [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('/login',   [AuthenticatedSessionController::class, 'store']);
+    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
+    Route::post('/register',[RegisteredUserController::class, 'store']);
+});
+
+// Déconnexion (réservée aux connectés)
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('logout');
+
+
+/*
+|--------------------------------------------------------------------------
+| PAGES PUBLIQUES
+|--------------------------------------------------------------------------
+*/
+Route::get('/cities/search', [CitiesController::class, 'search'])->name('cities.search');
+
 Route::get('/', function () {
     $latest = Activities::query()
         ->latest()
@@ -57,15 +92,19 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::get('/about', fn () => Inertia::render('PublicPages/about'))->name('about');
+Route::get('/about',   fn () => Inertia::render('PublicPages/about'))->name('about');
 Route::get('/contact', fn () => Inertia::render('PublicPages/contact'))->name('contact');
-Route::get('/cgu', fn () => Inertia::render('PublicPages/cgu'))->name('cgu');
-Route::get('/legal', fn () => Inertia::render('PublicPages/legal'))->name('legal');
+Route::post('/contact',[ContactController::class, 'send'])->name('contact.send');
+Route::get('/cgu',     fn () => Inertia::render('PublicPages/cgu'))->name('cgu');
+Route::get('/legal',   fn () => Inertia::render('PublicPages/legal'))->name('legal');
 Route::get('/privacy', fn () => Inertia::render('PublicPages/privacy'))->name('privacy');
-Route::post('/contact', [ContactController::class, 'send'])->name('contact.send');
+Route::get('/seo-example', fn () => Inertia::render('PublicPages/SeoExample'));
+
 
 /*
-| ACTIVITÉS (BDD)
+|--------------------------------------------------------------------------
+| ACTIVITÉS (public)
+|--------------------------------------------------------------------------
 */
 Route::get('/activities', function () {
     $activities = Activities::query()
@@ -116,54 +155,46 @@ Route::get('/activities/{id}', function (int $id) {
     ]);
 })->whereNumber('id')->name('activity.details');
 
-Route::get('/seo-example', fn () => Inertia::render('PublicPages/SeoExample'));
 
 /*
-| DASHBOARD UTILISATEUR (route nommée 'dashboard')
+|--------------------------------------------------------------------------
+| UTILISATEUR CONNECTÉ (zones privées)
+|--------------------------------------------------------------------------
+| NB: on enlève 'role:user' qui bloquait — on garde 'auth' (+ 'verified' si tu l'utilises).
 */
-Route::middleware(['auth', 'verified', 'role:user'])
-    ->get('/dashboard', fn () => Inertia::render('Dashboard'))
-    ->name('dashboard');
+Route::middleware(['auth'])->group(function () {
 
-/*
-| UTILISATEUR CONNECTÉ
-*/
-Route::middleware(['auth', 'verified', 'role:user'])->group(function () {
-    Route::get('/my-reservations', fn () => Inertia::render('MyReservations'))
-    ->name('my.reservations');
+    // Dashboard client (même page pour /dashboard et /dashboard/client)
+    Route::get('/dashboard',        [DashboardClientController::class, 'client'])->name('dashboard');
+    Route::get('/dashboard/client', [DashboardClientController::class, 'client'])->name('dashboard.client');
 
-Route::get('/annonces', fn () => Inertia::render('Annonces'))
-    ->name('annonces');
+    // Annonces (liste)
+    Route::get('/annonces', [AnnoncesController::class, 'index'])->name('annonces');
 
-    Route::get('/dashboard/client', fn () => Inertia::render('Dashboard'))
-        ->name('dashboard.client');
+    // Mes réservations
+    Route::get('/my-reservations', [ReservationsController::class, 'index'])->name('my.reservations');
+    Route::post('/activities/{id}/reserve', [ReservationsController::class, 'store'])
+        ->whereNumber('id')->name('activities.reserve');
 
-    // Activities Connected 
-    Route::get('/activitesconnected', [ActivitiesConnectedController::class, 'index'])
-        ->name('activities.connected');
+    // Activities Connected
+    Route::get('/activitesconnected',  [ActivitiesConnectedController::class, 'index'])->name('activities.connected');
     Route::get('/activitiesconnected', [ActivitiesConnectedController::class, 'index']); // alias
-
     Route::get('/activities/{id}/connected', [ActivitiesConnectedController::class, 'show'])
-        ->whereNumber('id')
-        ->name('activity.details.connected');
+        ->whereNumber('id')->name('activity.details.connected');
 
-    // ✅ Messagerie (contrôleur)
+    // Messagerie
     Route::get('/messagerie', [ConversationsController::class, 'index'])->name('messagerie');
-
     Route::get('/messages/{conversation}', [ConversationsController::class, 'show'])
-        ->whereNumber('conversation')
-        ->name('messages.show');
-
+        ->whereNumber('conversation')->name('messages.show');
     Route::post('/messages', [MessagesController::class, 'store'])->name('messages.store');
     Route::post('/messages/{conversation}/reply', [MessagesController::class, 'reply'])
-        ->whereNumber('conversation')
-        ->name('messages.reply');
+        ->whereNumber('conversation')->name('messages.reply');
+    Route::delete('/messages/{conversation}', [ConversationsController::class, 'destroy'])
+        ->whereNumber('conversation')->name('messages.destroy');
 
-
-    // ⬇️ Ancienne vue directe renommée (démo)
+    // Démo Messagerie
     Route::get('/messagerie-demo', fn () => Inertia::render('Messagerie'))->name('messagerie.demo');
 
-    // ⚠️ IMPORTANT : deux paramètres AVANT un paramètre (évite les collisions)
     Route::get('/messagerie/{user}/{activity}', function (int $user, int $activity) {
         $a = \App\Models\Activities::with('hostUser:id,name,prenom,nom')->findOrFail($activity);
 
@@ -188,31 +219,37 @@ Route::get('/annonces', fn () => Inertia::render('Annonces'))
         'contactId' => $user,
     ]))->whereNumber('user')->name('messagerie.user');
 
-// Supprimer une conversation
-Route::delete('/messages/{conversation}', [ConversationsController::class, 'destroy'])
-    ->whereNumber('conversation')->name('messages.destroy');
+    // Carte connectée
+    Route::get('/carte', [ActivitiesConnectedController::class, 'map'])->name('map.connected');
 
-
-    Route::get('/carte', fn () => Inertia::render('MapConnected'))->name('map.connected');
+    // Profil (pour l’instant en simple render, tu pourras brancher ton contrôleur)
     Route::get('/profil', fn () => Inertia::render('Profil'))->name('profil');
     Route::get('/profil/modifier', fn () => Inertia::render('EditProfil'))->name('edit.profil');
     Route::get('/organisateur/{id}', fn (int $id) => Inertia::render('ProfilOrganisateur', ['id' => $id]))
-        ->whereNumber('id')
-        ->name('organisateur.profil');
-    
+        ->whereNumber('id')->name('organisateur.profil');
+
+    // CRUD annonces
+    Route::get('/activities/create',      [AnnoncesController::class, 'create'])->name('activities.create');
+    Route::post('/activities',            [AnnoncesController::class, 'store'])->name('activities.store');
+    Route::get('/activities/{id}/edit',   [AnnoncesController::class, 'edit'])->whereNumber('id')->name('activities.edit');
+    Route::put('/activities/{id}',        [AnnoncesController::class, 'update'])->whereNumber('id')->name('activities.update');
+    Route::delete('/activities/{id}',     [AnnoncesController::class, 'destroy'])->whereNumber('id')->name('activities.destroy');
 });
+
 
 /*
-| ADMIN
+|--------------------------------------------------------------------------
+| ADMIN (protégé)
+|--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', fn () => Inertia::render('admin/AdminDashboard'))->name('admin.dashboard');
-    Route::get('/admin/admin-organizers', fn () => Inertia::render('admin/AdminOrganizers'))->name('admin.organizers');
-    Route::get('/admin/identity-validation', fn () => Inertia::render('admin/IdentityValidation'))->name('admin.identity.validation');
-    Route::get('/admin/statistics', fn () => Inertia::render('admin/Statistics'))->name('admin.statistics');
-    Route::get('/admin/admin-activities', [AdminActivitiesController::class, 'index'])->name('admin.activities');
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard',          fn () => Inertia::render('admin/AdminDashboard'))->name('admin.dashboard');
+    Route::get('/admin/admin-organizers',   fn () => Inertia::render('admin/AdminOrganizers'))->name('admin.organizers');
+    Route::get('/admin/identity-validation',fn () => Inertia::render('admin/IdentityValidation'))->name('admin.identity.validation');
+    Route::get('/admin/statistics',         fn () => Inertia::render('admin/Statistics'))->name('admin.statistics');
+    Route::get('/admin/admin-activities',   [AdminActivitiesController::class, 'index'])->name('admin.activities');
 });
 
-// Autres fichiers de routes
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
+// autres fichiers de routes si tu en as besoin
+// require __DIR__.'/settings.php';
+// require __DIR__.'/auth.php';

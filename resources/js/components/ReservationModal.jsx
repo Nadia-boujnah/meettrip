@@ -1,38 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { router } from "@inertiajs/react";       // ✅ AJOUT
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, startOfDay } from "date-fns";
 
 export default function ReservationModal({ visible, onClose, activity }) {
   const [selectedDate, setSelectedDate] = useState(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   if (!visible || !activity) return null;
 
-  // ✅ Conversion des dates en objets Date
   const allowedDates = (activity.dates || []).map((d) => {
     const [day, month, year] = d.split("-");
     return startOfDay(new Date(`${year}-${month}-${day}`));
   });
 
   const handleConfirm = () => {
-    if (selectedDate) {
-      setConfirmed(true);
-      setTimeout(() => {
-        setConfirmed(false);
-        setSelectedDate(null);
-        onClose();
-      }, 2000);
-    }
+    if (!selectedDate) return;
+
+    const iso = new Date(selectedDate).toISOString().slice(0, 10); // YYYY-MM-DD
+    setSubmitting(true);
+
+    router.post(
+      route ? route("activities.reserve", activity.id) : `/activities/${activity.id}/reserve`,
+      { requested_date: iso },
+      {
+        preserveScroll: true,
+        onFinish: () => setSubmitting(false),
+        onSuccess: () => onClose && onClose(),
+      }
+    );
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
         <h2 className="text-xl font-bold mb-4">Réserver : {activity.title}</h2>
 
-        <label className="block mb-4 text-sm text-gray-700">
-          Choisissez une date :
-        </label>
+        <label className="block mb-4 text-sm text-gray-700">Choisissez une date :</label>
 
         <Calendar
           mode="single"
@@ -40,28 +44,18 @@ export default function ReservationModal({ visible, onClose, activity }) {
           onSelect={setSelectedDate}
           className="rounded-md border"
           defaultMonth={allowedDates[0]}
-          disabled={(date) =>
-            !allowedDates.some((allowedDate) =>
-              isSameDay(allowedDate, date)
-            )
-          }
+          disabled={(date) => !allowedDates.some((d) => isSameDay(d, date))}
         />
 
-        {confirmed ? (
-          <div className="bg-green-100 text-green-800 px-4 py-2 rounded text-sm text-center mt-4">
-            ✅ Réservé pour le {format(selectedDate, "dd-MM-yyyy")}
-          </div>
-        ) : (
-          <button
-            onClick={handleConfirm}
-            disabled={!selectedDate}
-            className="mt-4 bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded disabled:opacity-50"
-          >
-            {selectedDate
-              ? `Confirmer pour le ${format(selectedDate, "dd-MM-yyyy")}`
-              : "Confirmer la réservation"}
-          </button>
-        )}
+        <button
+          onClick={handleConfirm}
+          disabled={!selectedDate || submitting}
+          className="mt-4 bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded disabled:opacity-50"
+        >
+          {selectedDate
+            ? `Confirmer pour le ${format(selectedDate, "dd-MM-yyyy")}`
+            : "Confirmer la réservation"}
+        </button>
 
         <button
           onClick={onClose}

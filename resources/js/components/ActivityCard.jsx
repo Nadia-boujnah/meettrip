@@ -1,15 +1,26 @@
 import { Link } from '@inertiajs/react';
 
-// Import automatique des images locales
+// Import automatique des images locales (fallback visuel si besoin)
 const images = import.meta.glob('@/assets/images/*', { eager: true });
-const resolveImg = (name) => {
+const resolveLocalImage = (name) => {
   if (!name) return null;
   const key = `/resources/js/assets/images/${name}`;
   return images[key]?.default ?? null;
 };
 
 export default function ActivityCard({ activity }) {
-  const imageSrc = resolveImg(activity.image) || '/images/placeholder.jpg';
+  // 🖼️ Détermination intelligente de la source de l’image
+  const imageSrc =
+    // 1️⃣ URL calculée par Laravel (accessor image_url)
+    activity?.image_url
+      ? activity.image_url
+      // 2️⃣ Ancien chemin stocké directement (public/activities)
+      : activity?.image?.startsWith('activities/')
+      ? `/${activity.image}`
+      // 3️⃣ Image importée localement (assets/images)
+      : resolveLocalImage(activity.image)
+      // 4️⃣ Fallback final
+      ?? '/images/placeholder.jpg';
 
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -17,6 +28,7 @@ export default function ActivityCard({ activity }) {
         src={imageSrc}
         alt={activity.title}
         className="h-48 w-full object-cover"
+        onError={(e) => (e.target.src = '/images/placeholder.jpg')} // sécurité
       />
       <div className="p-4 space-y-2">
         <p className="text-sm text-gray-500">

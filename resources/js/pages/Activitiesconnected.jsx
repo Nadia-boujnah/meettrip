@@ -1,8 +1,27 @@
+// en haut du fichier
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import ReservationModal from '@/components/ReservationModal';
 import { resolveAssetImage } from '@/utils/resolveAssetImage';
+
+function getActivityImage(a) {
+
+  if (a?.image_url) return a.image_url;
+
+
+  if (a?.image && a.image.startsWith('activities/')) {
+    return `/storage/${a.image}`;
+  }
+
+  const try1 = typeof resolveAssetImage === 'function' ? resolveAssetImage(a?.image) : null;
+  if (try1) return try1;
+  const try2 = typeof resolveAssetImage === 'function' ? resolveAssetImage(`images/${a?.image}`) : null;
+  if (try2) return try2;
+
+
+  return '/images/placeholder.png'; 
+}
 
 export default function Activitiesconnected() {
   const { auth = {}, activities = [] } = usePage().props;
@@ -25,9 +44,7 @@ export default function Activitiesconnected() {
   const paginatedActivities = filteredActivities.slice(startIndex, startIndex + activitiesPerPage);
 
   const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const handleReservation = (activity) => {
@@ -65,9 +82,8 @@ export default function Activitiesconnected() {
         {/* Grille d'activités */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedActivities.map((activity) => {
-            // Image depuis resources/js/assets (et sous-dossiers)
-            const img = resolveAssetImage(activity.image);
-            // Nom organisateur (fallback sur name si pas de prenom/nom)
+            const img = getActivityImage(activity);
+
             const hostFirst = activity?.host_user?.prenom || activity?.host_user?.name || '';
             const hostLast = activity?.host_user?.nom || '';
             const hostId = activity?.host_user?.id;
@@ -82,6 +98,7 @@ export default function Activitiesconnected() {
                     src={img}
                     alt={activity.title}
                     className="w-full h-48 object-cover rounded-t"
+                    loading="lazy"
                   />
                 )}
 
@@ -93,7 +110,6 @@ export default function Activitiesconnected() {
                     </p>
                     <p className="text-sm mt-1">{activity.description}</p>
 
-                    {/* Nombre de participants */}
                     {typeof activity.participants !== 'undefined' && (
                       <p className="text-sm text-gray-600 mt-2">
                         <span className="font-medium">{activity.participants}</span>{' '}
@@ -102,7 +118,6 @@ export default function Activitiesconnected() {
                     )}
                   </div>
 
-                  {/* Lien organisateur -> messagerie avec contexte activité */}
                   {(hostFirst || hostLast) && hostId && (
                     <p className="text-sm text-gray-500 mt-4">
                       Organisé par{' '}
@@ -160,7 +175,6 @@ export default function Activitiesconnected() {
         )}
       </div>
 
-      {/* Modale de réservation */}
       <ReservationModal
         visible={showCalendar}
         onClose={() => setShowCalendar(false)}

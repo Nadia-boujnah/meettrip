@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -31,22 +32,43 @@ class Activities extends Model
         'dates'     => 'array', // Laravel convertit automatiquement JSON ↔ array
     ];
 
-    // On ajoute des attributs calculés pour le front (Inertia)
+    // Attributs calculés exposés au front (Inertia)
     protected $appends = ['image_url', 'date'];
 
     /**
-     * Retourne l’URL publique de l’image (pour le front)
-     * Exemple : /storage/activities/rome.png
+     * URL publique de l’image
+     * - En BDD on ne garde que le nom de fichier (ex: "rome.png")
+     * - On sert depuis storage/app/public/activities -> /storage/activities/rome.png
      */
-    public function getImageUrlAttribute(): ?string
-    {
-        if (!$this->image) {
-            return null;
-        }
-
-        // Assure que le lien soit accessible via /storage/... (symlink créé)
-        return asset(Storage::url($this->image));
+public function getImageUrlAttribute(): ?string
+{
+    $img = $this->image;
+    if (!$img) {
+        return asset('images/null.png'); // ou null si tu préfères
     }
+
+    // URL absolue déjà prête ?
+    if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://') || str_starts_with($img, '/')) {
+        return $img;
+    }
+
+    // On réduit toujours à un nom de fichier (évite les préfixes "activities/" etc.)
+    $filename = basename($img);
+
+    // 1) Préférence: storage (storage/app/public/activities)
+    if (\Illuminate\Support\Facades\Storage::disk('public')->exists('activities/' . $filename)) {
+        return asset('storage/activities/' . $filename);
+    }
+
+    // 2) Fallback: public/activities (anciennes images)
+    if (file_exists(public_path('activities/' . $filename))) {
+        return asset('activities/' . $filename);
+    }
+
+    // 3) Dernier recours: placeholder
+    return asset('images/null.png');
+}
+
 
     /**
      * Retourne la première date du tableau "dates"
@@ -82,10 +104,24 @@ class Activities extends Model
     }
 
     /**
-     * Petit helper : savoir si l’activité a une image stockée
+     * Savoir si l’activité a un fichier image stocké
      */
     public function hasImage(): bool
     {
-        return !empty($this->image) && Storage::exists($this->image);
+        if (!$this->image) return false;
+
+        // On teste l’existence sur le disque "public"
+        $filename = basename($this->image);
+        return Storage::disk('public')->exists('activities/' . $filename);
+    }
+
+    /**
+     * Participants (invités)
+     */
+    public function guests()
+    {
+        return $this->belongsToMany(User::class, 'activity_user', 'activity_id', 'user_id')
+            ->withPivot(['status'])
+            ->withTimestamps();
     }
 }
