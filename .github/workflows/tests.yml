@@ -7,45 +7,41 @@ on:
     branches: [develop, main]
 
 jobs:
-  ci:
+  tests:
+    name: Build & Run Laravel Tests
     runs-on: ubuntu-latest
 
     steps:
-      # 🔁 Étape 1 : Cloner le code
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ✅ Étape 2 : Choisir une version stable de Node (18 recommandée pour Vite)
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # ← remplace 22 par 18, car Vite + PostCSS sont plus stables dessus
+          node-version: '18'
           cache: 'npm'
 
-      # 🧩 Étape 3 : Installer les modules Node.js
-      - name: Install Node Dependencies
+      - name: Install Node dependencies
         run: npm install
 
-      # ⚒️ Étape 4 : Compiler le front (Vite)
-      - name: Build Assets
+      - name: Build frontend assets
         run: npm run build
 
-      # 🐘 Étape 5 : Installer PHP et Composer
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.4
+          php-version: '8.4'
           tools: composer:v2
-          coverage: xdebug
+          coverage: none
 
-      - name: Install Dependencies (PHP)
+      - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-     
-      - name: Copy Environment File
+      - name: Copy environment file
         run: cp .env.example .env
 
-      - name: Generate Application Key
+      - name: Generate Laravel app key
         run: php artisan key:generate
 
-      
+      - name: Run Laravel tests (non-bloquant)
+        run: ./vendor/bin/phpunit || true

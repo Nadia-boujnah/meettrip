@@ -2,20 +2,18 @@ name: linter
 
 on:
   push:
-    branches:
-      - develop
-      - main
+    branches: [develop, main]
   pull_request:
-    branches:
-      - develop
-      - main
+    branches: [develop, main]
 
 permissions:
   contents: write
 
 jobs:
   quality:
+    name: Lint & Format Code
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,22 +22,22 @@ jobs:
         with:
           php-version: '8.4'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
       - name: Install Dependencies
         run: |
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm install
 
-      - name: Run Pint
+      - name: Run Pint (PHP linter)
         run: vendor/bin/pint
 
-      - name: Format Frontend
+      - name: Format Frontend (Prettier)
         run: npm run format
 
-      - name: Lint Frontend
+      - name: Lint Frontend (ESLint)
         run: npm run lint
-
-      # - name: Commit Changes
-      #   uses: stefanzweifel/git-auto-commit-action@v5
-      #   with:
-      #     commit_message: fix code style
-      #     commit_options: '--no-verify'
