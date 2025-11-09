@@ -25,20 +25,19 @@ import {
 import logoMeetTrip from '@/assets/images/logomeettrip.png';
 
 const mainNavItems = [
-  { title: 'Accueil', url: '/dashboard/client', icon: Home },
   { title: 'Profil', url: '/profil', icon: User },
   { title: 'Activités', url: '/activitesconnected', icon: Handshake },
   { title: 'Mes réservations', url: '/my-reservations', icon: CalendarCheck },
   { title: 'Carte', url: '/carte', icon: Map },
-  { title: 'Messagerie', url: '/messagerie', icon: Mail },
+  { title: 'Messagerie', url: '/messagerie', icon: Mail }, // le badge sera injecté dynamiquement
   { title: 'Annonces', url: '/annonces', icon: Newspaper },
 ];
 
 const adminNavItems = [
-  { title: 'Accueil', url: '/admin/dashboard', icon: Home },              
-  { title: 'Profil des membres', url: '/admin/admin-organizers', icon: Handshake },                 
-  { title: 'Validation Identités', url: '/admin/identity-validation', icon: CalendarCheck }, 
-  { title: 'Statistiques', url: '/admin/statistics', icon: Map },   
+  { title: 'Accueil', url: '/admin/dashboard', icon: Home },
+  { title: 'Profil des membres', url: '/admin/admin-organizers', icon: Handshake },
+  { title: 'Validation Identités', url: '/admin/identity-validation', icon: CalendarCheck },
+  { title: 'Statistiques', url: '/admin/statistics', icon: Map },
   { title: 'Vue des activités', url: '/admin/admin-activities', icon: ListTodo },
 ];
 
@@ -48,16 +47,34 @@ const footerNavItems = [
 
 export function AppSidebar() {
   const page = usePage();
-  const {auth} = page.props;
+  const { auth, host, messaging } = page.props;
 
-  console.log(auth);
+  const pendingCount = host?.pending_reservations || 0;
 
-  let navItems = mainNavItems;
+  // 🔵 Ici on récupère le total non lus (fourni par le back via HandleInertiaRequests)
+  const unreadMessages = messaging?.unread_total ?? 0;
 
-  const isAdmin = auth.user && auth.user.role === "admin";
-  if (isAdmin) {
-    navItems = adminNavItems;
-  } 
+  // Construire la liste d’items avec les badges
+  const isAdmin = auth?.user && auth.user.role === 'admin';
+  let navItems = isAdmin ? [...adminNavItems] : [...mainNavItems];
+
+  if (!isAdmin) {
+    // Injecter le badge sur "Messagerie"
+    navItems = navItems.map((it) =>
+      it.title === 'Messagerie' ? { ...it, badge: unreadMessages > 0 ? unreadMessages : null } : it
+    );
+
+    // Ajouter "Demandes reçues" avec son badge existant
+    navItems = [
+      ...navItems,
+      {
+        title: 'Demandes reçues',
+        url: '/host/reservations',
+        icon: ListTodo,
+        badge: pendingCount > 0 ? pendingCount : null,
+      },
+    ];
+  }
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -66,7 +83,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link
-                href={isAdmin ? "/admin/dashboard" : "/dashboard/client"}
+                href={isAdmin ? '/admin/dashboard' : '/profil'}
                 prefetch
                 className="flex items-center gap-2 px-2 pt-4 mb-9"
               >
@@ -88,11 +105,11 @@ export function AppSidebar() {
                     <item.icon className="w-5 h-5" />
                     <span>{item.title}</span>
                   </span>
-                  {item.badge && (
+                  {item.badge ? (
                     <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                       {item.badge}
                     </span>
-                  )}
+                  ) : null}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

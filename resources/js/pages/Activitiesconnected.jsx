@@ -1,4 +1,3 @@
-// en haut du fichier
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
@@ -9,7 +8,6 @@ function getActivityImage(a) {
 
   if (a?.image_url) return a.image_url;
 
-
   if (a?.image && a.image.startsWith('activities/')) {
     return `/storage/${a.image}`;
   }
@@ -19,8 +17,7 @@ function getActivityImage(a) {
   const try2 = typeof resolveAssetImage === 'function' ? resolveAssetImage(`images/${a?.image}`) : null;
   if (try2) return try2;
 
-
-  return '/images/placeholder.png'; 
+  return '/images/placeholder.png';
 }
 
 export default function Activitiesconnected() {
@@ -175,11 +172,17 @@ export default function Activitiesconnected() {
         )}
       </div>
 
-      <ReservationModal
-        visible={showCalendar}
-        onClose={() => setShowCalendar(false)}
-        activity={selectedActivity}
-      />
+      {/* ⬇️ Montage sécurisé du modal */}
+      {showCalendar && selectedActivity && (
+        <ReservationModal
+          visible={true}
+          activity={selectedActivity}
+          onClose={() => {
+            setShowCalendar(false);
+            setSelectedActivity(null);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

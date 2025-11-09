@@ -1,30 +1,59 @@
 import AppLayout from '@/layouts/app-layout.jsx';
-import { Head } from '@inertiajs/react';
-import { allActivities } from '@/data/activities';
+import { Head, usePage, router } from '@inertiajs/react';
 import { Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function AdminActivities() {
-  const [activities, setActivities] = useState(allActivities);
-  const [search, setSearch] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
+  const { activities, filters, locations } = usePage().props;
 
-  const uniqueLocations = [...new Set(allActivities.map((a) => a.location))];
+  // paginator ou tableau
+  const rows = Array.isArray(activities) ? activities : (activities?.data ?? []);
 
-  const handleDelete = (id) => {
-    if (confirm('Voulez-vous vraiment supprimer cette activité ?')) {
-      setActivities((prev) => prev.filter((a) => a.id !== id));
-      alert(`Activité ID ${id} supprimée (simulation).`);
-    }
+  const [search, setSearch] = useState(filters?.search ?? '');
+  const [location, setLocation] = useState(filters?.location ?? '');
+  const [perPage, setPerPage] = useState(filters?.perPage ?? 10);
+  const [busyId, setBusyId] = useState(null);
+
+  // rafraîchir côté serveur (filtres/pagination)
+  const go = (params = {}) => {
+    const query = {
+      search,
+      location,
+      perPage,
+      ...(params || {}),
+    };
+    router.get(route('admin.activities'), query, {
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
+    });
   };
 
-  const filteredActivities = activities.filter((a) => {
-    const matchSearch =
-      a.title.toLowerCase().includes(search.toLowerCase()) ||
-      a.host_user.name.toLowerCase().includes(search.toLowerCase());
-    const matchLocation = locationFilter ? a.location === locationFilter : true;
-    return matchSearch && matchLocation;
-  });
+  // debounce léger pour la recherche
+  useEffect(() => {
+    const t = setTimeout(() => go(), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, location, perPage]);
+
+  const handleDelete = (id) => {
+    if (!confirm('Voulez-vous vraiment supprimer cette activité ?')) return;
+    setBusyId(id);
+    router.delete(route('admin.activities.destroy', id), {
+      preserveScroll: true,
+      onFinish: () => setBusyId(null),
+    });
+  };
+
+  const uniqueLocations = useMemo(() => {
+    const server = Array.isArray(locations) ? locations : [];
+    return server;
+  }, [locations]);
+
+  const goto = (url) => {
+    if (!url) return;
+    router.get(url, {}, { preserveScroll: true, preserveState: true });
+  };
 
   return (
     <AppLayout title="Vue des activités">
@@ -42,18 +71,31 @@ export default function AdminActivities() {
             className="px-4 py-2 border rounded shadow-sm flex-1"
           />
           <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
             className="px-4 py-2 border rounded shadow-sm"
           >
             <option value="">Tous les lieux</option>
             {uniqueLocations.map((loc, idx) => (
-              <option key={idx} value={loc}>{loc}</option>
+              <option key={idx} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
+          <select
+            value={perPage}
+            onChange={(e) => setPerPage(Number(e.target.value))}
+            className="px-4 py-2 border rounded shadow-sm"
+          >
+            {[10, 25, 50].map((n) => (
+              <option key={n} value={n}>
+                {n} / page
+              </option>
             ))}
           </select>
         </div>
 
-        {/* Tableau des activités */}
+        {/* Tableau */}
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">
@@ -67,25 +109,32 @@ export default function AdminActivities() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredActivities.map((a) => (
+              {rows.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-3">
-                <img
-                src={a.image}
-                alt={a.title}
-                className="w-10 h-10 rounded-full object-cover border"
-                />
-                <span>{a.title}</span>
-                </td>
-
-                  <td className="px-4 py-3 text-gray-600">{a.location}</td>
-                  <td className="px-4 py-3 text-gray-600">{a.host_user.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{a.participants}</td>
-                  <td className="px-4 py-3 text-gray-500">{a.dates.join(', ')}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={a.image}
+                        alt={a.title}
+                        className="w-10 h-10 rounded-full object-cover border"
+                        onError={(e) => {
+                          e.currentTarget.src = '/storage/activities/default.png';
+                        }}
+                      />
+                      <span>{a.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{a.location ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{a.host_user?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{a.participants ?? 0}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {(a.dates ?? []).join(', ')}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleDelete(a.id)}
-                      className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
+                      disabled={busyId === a.id}
+                      className="text-red-600 hover:text-red-800 text-sm inline-flex items-center gap-1 disabled:opacity-60"
                     >
                       <Trash2 className="w-4 h-4" />
                       Supprimer
@@ -93,14 +142,34 @@ export default function AdminActivities() {
                   </td>
                 </tr>
               ))}
-              {filteredActivities.length === 0 && (
+
+              {rows.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center text-gray-400 py-4">Aucune activité trouvée.</td>
+                  <td colSpan="6" className="text-center text-gray-400 py-4">
+                    Aucune activité trouvée.
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination (si paginator) */}
+        {activities?.links && (
+          <div className="flex items-center gap-2 pt-4">
+            {activities.links.map((link, i) => (
+              <button
+                key={i}
+                disabled={!link.url}
+                onClick={() => goto(link.url)}
+                className={`px-3 py-1 rounded border text-sm ${
+                  link.active ? 'bg-gray-900 text-white' : 'bg-white text-gray-700'
+                } disabled:opacity-40`}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   );

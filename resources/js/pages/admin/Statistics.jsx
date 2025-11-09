@@ -1,5 +1,7 @@
+// resources/js/pages/admin/Statistics.jsx
 import AppLayout from '@/layouts/app-layout.jsx';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
+
 import {
   Chart as ChartJS,
   LineElement,
@@ -12,76 +14,54 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Line, Pie } from 'react-chartjs-2';
-import { allUsers } from '@/data/users';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ArcElement);
 
 export default function Statistics() {
-  // 📊 Données dynamiques depuis allUsers
-  const totalUsers = allUsers.length;
-  const comptesValidés = allUsers.filter(u => u.verifie === true).length;
-  const comptesEnAttente = allUsers.filter(u => u.verifie === 'en attente').length;
-  const comptesRefusés = allUsers.filter(u => u.verifie === false).length;
-  const totalOrganisateurs = allUsers.filter(u => u.role === 'organisateur').length;
-  const totalParticipants = allUsers.filter(u => u.role === 'participant').length;
+  const { stats } = usePage().props;
 
-
-  const totalIdentitesAValider = comptesEnAttente;
-  const totalActivitesCreees = 430; // Remplacer par une vraie source si besoin
-
-  const stats = [
-    { label: 'Utilisateurs inscrits', value: totalUsers },
-    { label: 'Comptes validés', value: comptesValidés },
-    { label: 'Activités créées', value: totalActivitesCreees },
-    { label: 'Identités à valider', value: totalIdentitesAValider },
+  const cards = [
+    { label: 'Utilisateurs inscrits', value: stats.users },
+    { label: 'Comptes validés',      value: stats.validated },
+    { label: 'Activités créées',     value: stats.activities },
+    { label: 'Identités à valider',  value: stats.identitiesToValidate },
   ];
 
-  const chartData = {
-    labels: ['Janv', 'Fév', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil'],
+  // Line chart (12 mois, année courante passée par le back)
+  const lineData = {
+    labels: ['Janv', 'Fév', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'],
     datasets: [
       {
-        label: 'Activités créées',
-        data: [35, 52, 68, 90, 112, 140, 180],
-        fill: false,
+        label: `Activités créées (${stats.year})`,
+        data: stats.series,
         borderColor: '#3B82F6',
         backgroundColor: '#3B82F6',
         tension: 0.3,
+        fill: false,
       },
     ],
   };
 
-  const chartOptions = {
+  const lineOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          color: '#1B1B18',
-        },
-      },
-      title: {
-        display: true,
-        text: 'Évolution des activités créées (2024)',
-        color: '#1B1B18',
-      },
+      legend: { position: 'top', labels: { color: '#1B1B18' } },
+      title:  { display: true, text: `Évolution des activités créées (${stats.year})`, color: '#1B1B18' },
     },
     scales: {
-      y: {
-        ticks: { color: '#1B1B18' },
-        beginAtZero: true,
-      },
-      x: {
-        ticks: { color: '#1B1B18' },
-      },
+      y: { beginAtZero: true, ticks: { color: '#1B1B18' } },
+      x: { ticks: { color: '#1B1B18' } },
     },
   };
 
+  // Pie chart répartition des statuts (validés vs en attente/rejetés)
+  const pendingLike = Math.max(0, stats.users - stats.validated); // approximation simple
   const pieData = {
-    labels: ['Comptes validés', 'En attente', 'Refusés'],
+    labels: ['Comptes validés', 'En attente / refusés'],
     datasets: [
       {
-        data: [comptesValidés, comptesEnAttente, comptesRefusés],
-        backgroundColor: ['#1D4ED8', '#3B82F6', '#93C5FD'],
+        data: [stats.validated, pendingLike],
+        backgroundColor: ['#1D4ED8', '#93C5FD'],
         borderColor: '#fff',
         borderWidth: 1,
       },
@@ -91,13 +71,7 @@ export default function Statistics() {
   const pieOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: '#1B1B18',
-          font: { size: 14 },
-        },
-      },
+      legend: { position: 'bottom', labels: { color: '#1B1B18', font: { size: 14 } } },
     },
   };
 
@@ -107,43 +81,43 @@ export default function Statistics() {
       <div className="p-6 bg-white text-[#1B1B18] space-y-10">
         <h1 className="text-3xl font-bold mb-6">Statistiques générales</h1>
 
-        {/* Cartes de statistiques */}
+        {/* Cartes */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((item, index) => (
-            <div key={index} className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
+          {cards.map((item, i) => (
+            <div key={i} className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
               <div className="text-sm text-gray-500">{item.label}</div>
               <div className="text-2xl font-semibold mt-1">{item.value}</div>
             </div>
           ))}
         </div>
 
-        {/* Line Chart */}
+        {/* Courbe */}
         <div className="bg-white rounded-xl shadow p-6">
-          <Line data={chartData} options={chartOptions} />
+          <Line data={lineData} options={lineOptions} />
         </div>
 
         {/* Camembert */}
         <div className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-bold mb-4">Répartition des statuts de comptes</h2>
-          <div className="w-[300px] mx-auto">
+          <div className="w-[340px] mx-auto">
             <Pie data={pieData} options={pieOptions} />
           </div>
         </div>
-        {/* Rôles : Participants vs Organisateurs */}
-<div className="bg-white rounded-xl shadow p-6">
-  <h2 className="text-xl font-bold mb-4">Répartition des rôles</h2>
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="text-sm text-gray-500">Organisateurs</div>
-      <div className="text-2xl font-bold">{totalOrganisateurs}</div>
-    </div>
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="text-sm text-gray-500">Participants</div>
-      <div className="text-2xl font-bold">{totalParticipants}</div>
-    </div>
-  </div>
-</div>
 
+        {/* Rôles */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-xl font-bold mb-4">Répartition des rôles</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm text-gray-500">Organisateurs</div>
+              <div className="text-2xl font-bold">{stats.roles.organisateurs}</div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm text-gray-500">Participants</div>
+              <div className="text-2xl font-bold">{stats.roles.participants}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

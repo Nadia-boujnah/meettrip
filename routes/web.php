@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Illuminate\Http\Request;
 
 // PUBLIC CONTROLLERS
 use App\Http\Controllers\ContactController;
@@ -15,21 +14,31 @@ use App\Http\Controllers\ReservationsController;
 use App\Http\Controllers\ConversationsController;
 use App\Http\Controllers\MessagesController;
 use App\Http\Controllers\Admin\AdminActivitiesController;
-use App\Http\Controllers\DashboardClientController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminOrganizersController;
+use App\Http\Controllers\Admin\IdentityValidationController;
+use App\Http\Controllers\Admin\StatisticsController;
 
-// AUTH CONTROLLERS (important: pour /login /register)
+
+// PROFIL PUBLIC
+use App\Http\Controllers\ProfileController;
+
+// AUTH CONTROLLERS
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+
+// 🔹 PARAMÈTRES (Settings)
+use App\Http\Controllers\Settings\PasswordController as SettingsPasswordController;
+use App\Http\Controllers\Settings\ProfileController  as SettingsProfileController;
 
 // MODELS
 use App\Models\Activities;
 
-/*
-|--------------------------------------------------------------------------
-| AUTH (toujours côté invités)
-|--------------------------------------------------------------------------
-| Ces routes ne doivent JAMAIS être protégées par 'auth' ou autre rôle.
-*/
+// 🔐 Middleware (pour le hot-fix FQCN)
+use App\Http\Middleware\AdminMiddleware;
+
+
+/* ----------------------- AUTH (INVITÉS) ----------------------- */
 Route::middleware('guest')->group(function () {
     Route::get('/login',    [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login',   [AuthenticatedSessionController::class, 'store']);
@@ -37,51 +46,39 @@ Route::middleware('guest')->group(function () {
     Route::post('/register',[RegisteredUserController::class, 'store']);
 });
 
-// Déconnexion (réservée aux connectés)
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth')
-    ->name('logout');
+    ->middleware('auth')->name('logout');
 
-
-/*
-|--------------------------------------------------------------------------
-| PAGES PUBLIQUES
-|--------------------------------------------------------------------------
-*/
+/* ----------------------- PAGES PUBLIQUES ---------------------- */
 Route::get('/cities/search', [CitiesController::class, 'search'])->name('cities.search');
 
 Route::get('/', function () {
     $latest = Activities::query()
-        ->latest()
-        ->take(4)
-        ->get()
+        ->latest()->take(4)->get()
         ->map(fn($a) => [
-            'id'           => $a->id,
-            'title'        => $a->title,
-            'location'     => $a->location,
-            'participants' => $a->participants,
-            'description'  => $a->description,
-            'why'          => $a->why,
-            'dates'        => $a->dates ?? [],
-            'date'         => $a->date,
-            'image'        => $a->image,
-            'image_url'    => $a->image_url,
-            'latitude'     => $a->latitude,
-            'longitude'    => $a->longitude,
+            'id'          => $a->id,
+            'title'       => $a->title,
+            'location'    => $a->location,
+            'participants'=> $a->participants,
+            'description' => $a->description,
+            'why'         => $a->why,
+            'dates'       => $a->dates ?? [],
+            'date'        => $a->date,
+            'image'       => $a->image,
+            'image_url'   => $a->image_url,
+            'latitude'    => $a->latitude,
+            'longitude'   => $a->longitude,
         ]);
 
     $forMap = Activities::query()
-        ->whereNotNull('latitude')
-        ->whereNotNull('longitude')
-        ->latest()
-        ->take(200)
-        ->get()
+        ->whereNotNull('latitude')->whereNotNull('longitude')
+        ->latest()->take(200)->get()
         ->map(fn($a) => [
             'id'        => $a->id,
             'title'     => $a->title,
             'location'  => $a->location,
-            'lat'       => (float)$a->latitude,
-            'lng'       => (float)$a->longitude,
+            'lat'       => (float) $a->latitude,
+            'lng'       => (float) $a->longitude,
             'image'     => $a->image,
             'image_url' => $a->image_url,
         ]);
@@ -100,37 +97,29 @@ Route::get('/legal',   fn () => Inertia::render('PublicPages/legal'))->name('leg
 Route::get('/privacy', fn () => Inertia::render('PublicPages/privacy'))->name('privacy');
 Route::get('/seo-example', fn () => Inertia::render('PublicPages/SeoExample'));
 
-
-/*
-|--------------------------------------------------------------------------
-| ACTIVITÉS (public)
-|--------------------------------------------------------------------------
-*/
+/* ----------------------- ACTIVITÉS (public) ------------------- */
 Route::get('/activities', function () {
     $activities = Activities::query()
-        ->latest()
-        ->paginate(9)
+        ->latest()->paginate(9)
         ->through(function ($a) {
             return [
-                'id'           => $a->id,
-                'title'        => $a->title,
-                'location'     => $a->location,
-                'participants' => $a->participants,
-                'description'  => $a->description,
-                'why'          => $a->why,
-                'dates'        => $a->dates ?? [],
-                'date'         => $a->date,
-                'image'        => $a->image,
-                'image_url'    => $a->image_url,
-                'latitude'     => $a->latitude,
-                'longitude'    => $a->longitude,
-                'host_user'    => $a->hostUser?->only(['id','name']),
+                'id'          => $a->id,
+                'title'       => $a->title,
+                'location'    => $a->location,
+                'participants'=> $a->participants,
+                'description' => $a->description,
+                'why'         => $a->why,
+                'dates'       => $a->dates ?? [],
+                'date'        => $a->date,
+                'image'       => $a->image,
+                'image_url'   => $a->image_url,
+                'latitude'    => $a->latitude,
+                'longitude'   => $a->longitude,
+                'host_user'   => $a->hostUser?->only(['id','name']),
             ];
         });
 
-    return Inertia::render('PublicPages/activities', [
-        'activities' => $activities,
-    ]);
+    return Inertia::render('PublicPages/activities', ['activities' => $activities]);
 })->name('activities');
 
 Route::get('/activities/{id}', function (int $id) {
@@ -138,47 +127,52 @@ Route::get('/activities/{id}', function (int $id) {
 
     return Inertia::render('PublicPages/details-activities', [
         'activity' => [
-            'id'           => $a->id,
-            'title'        => $a->title,
-            'location'     => $a->location,
-            'participants' => $a->participants,
-            'description'  => $a->description,
-            'why'          => $a->why,
-            'dates'        => $a->dates ?? [],
-            'date'         => $a->date,
-            'image'        => $a->image,
-            'image_url'    => $a->image_url,
-            'latitude'     => $a->latitude,
-            'longitude'    => $a->longitude,
-            'host_user'    => $a->hostUser?->only(['id','name']),
-        ],
+            'id'          => $a->id,
+            'title'       => $a->title,
+            'location'    => $a->location,
+            'participants'=> $a->participants,
+            'description' => $a->description,
+            'why'         => $a->why,
+            'dates'       => $a->dates ?? [],
+            'date'        => $a->date,
+            'image'       => $a->image,
+            'image_url'   => $a->image_url,
+            'latitude'    => $a->latitude,
+            'longitude'   => $a->longitude,
+            'host_user'   => $a->hostUser?->only(['id','name']),
+        ]
     ]);
 })->whereNumber('id')->name('activity.details');
 
+/* ----------------------- PROFIL PUBLIC ------------------------ */
+Route::get('/profil/{user}', [ProfileController::class, 'show'])
+    ->whereNumber('user')->name('profile.show');
 
-/*
-|--------------------------------------------------------------------------
-| UTILISATEUR CONNECTÉ (zones privées)
-|--------------------------------------------------------------------------
-| NB: on enlève 'role:user' qui bloquait — on garde 'auth' (+ 'verified' si tu l'utilises).
-*/
+/* ----------------------- ZONE AUTH ---------------------------- */
 Route::middleware(['auth'])->group(function () {
 
-    // Dashboard client (même page pour /dashboard et /dashboard/client)
-    Route::get('/dashboard',        [DashboardClientController::class, 'client'])->name('dashboard');
-    Route::get('/dashboard/client', [DashboardClientController::class, 'client'])->name('dashboard.client');
+    // Dashboards
+    Route::get('/dashboard', fn () => redirect()->route('profile.me'))->name('dashboard');
+    Route::get('/dashboard/client', fn () => redirect()->route('profile.me'))->name('dashboard.client');
 
-    // Annonces (liste)
+    // Annonces
     Route::get('/annonces', [AnnoncesController::class, 'index'])->name('annonces');
 
-    // Mes réservations
+    // Mes réservations (VOYAGEUR) + Créer une réservation
     Route::get('/my-reservations', [ReservationsController::class, 'index'])->name('my.reservations');
     Route::post('/activities/{id}/reserve', [ReservationsController::class, 'store'])
         ->whereNumber('id')->name('activities.reserve');
 
+    // 🔹 Demandes reçues (ORGANISATEUR) + actions
+    Route::get('/host/reservations', [ReservationsController::class, 'inbox'])->name('host.reservations');
+    Route::patch('/host/reservations/{activity}/{guest}/accept', [ReservationsController::class, 'accept'])
+        ->whereNumber(['activity','guest'])->name('host.reservations.accept');
+    Route::patch('/host/reservations/{activity}/{guest}/decline', [ReservationsController::class, 'decline'])
+        ->whereNumber(['activity','guest'])->name('host.reservations.decline');
+
     // Activities Connected
     Route::get('/activitesconnected',  [ActivitiesConnectedController::class, 'index'])->name('activities.connected');
-    Route::get('/activitiesconnected', [ActivitiesConnectedController::class, 'index']); // alias
+    Route::get('/activitiesconnected', [ActivitiesConnectedController::class, 'index']);
     Route::get('/activities/{id}/connected', [ActivitiesConnectedController::class, 'show'])
         ->whereNumber('id')->name('activity.details.connected');
 
@@ -192,20 +186,18 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/messages/{conversation}', [ConversationsController::class, 'destroy'])
         ->whereNumber('conversation')->name('messages.destroy');
 
-    // Démo Messagerie
     Route::get('/messagerie-demo', fn () => Inertia::render('Messagerie'))->name('messagerie.demo');
 
     Route::get('/messagerie/{user}/{activity}', function (int $user, int $activity) {
         $a = \App\Models\Activities::with('hostUser:id,name,prenom,nom')->findOrFail($activity);
-
         return Inertia::render('Messagerie', [
             'contactId' => $user,
             'activityContext' => [
-                'id'       => $a->id,
-                'title'    => $a->title,
+                'id'    => $a->id,
+                'title' => $a->title,
                 'location' => $a->location,
-                'image'    => $a->image,
-                'host'     => [
+                'image' => $a->image,
+                'host'  => [
                     'id'     => $a->hostUser?->id,
                     'name'   => $a->hostUser?->name,
                     'prenom' => $a->hostUser?->prenom,
@@ -219,14 +211,13 @@ Route::middleware(['auth'])->group(function () {
         'contactId' => $user,
     ]))->whereNumber('user')->name('messagerie.user');
 
-    // Carte connectée
+    // Carte
     Route::get('/carte', [ActivitiesConnectedController::class, 'map'])->name('map.connected');
 
-    // Profil (pour l’instant en simple render, tu pourras brancher ton contrôleur)
-    Route::get('/profil', fn () => Inertia::render('Profil'))->name('profil');
-    Route::get('/profil/modifier', fn () => Inertia::render('EditProfil'))->name('edit.profil');
-    Route::get('/organisateur/{id}', fn (int $id) => Inertia::render('ProfilOrganisateur', ['id' => $id]))
-        ->whereNumber('id')->name('organisateur.profil');
+    // Mon profil
+    Route::get('/profil', [\App\Http\Controllers\ProfileController::class, 'me'])->name('profile.me');
+    Route::get('/profil/modifier', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profil', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
 
     // CRUD annonces
     Route::get('/activities/create',      [AnnoncesController::class, 'create'])->name('activities.create');
@@ -234,22 +225,72 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/activities/{id}/edit',   [AnnoncesController::class, 'edit'])->whereNumber('id')->name('activities.edit');
     Route::put('/activities/{id}',        [AnnoncesController::class, 'update'])->whereNumber('id')->name('activities.update');
     Route::delete('/activities/{id}',     [AnnoncesController::class, 'destroy'])->whereNumber('id')->name('activities.destroy');
+
+    /* ---------------- PARAMÈTRES (Settings) ------------------- */
+    Route::redirect('/parametres', '/parametres/profile');
+
+    Route::get('/parametres/profile',   [SettingsProfileController::class,  'edit'])->name('settings.profile.edit');
+    Route::patch('/parametres/profile', [SettingsProfileController::class,  'update'])->name('settings.profile.update');
+    Route::delete('/parametres/profile',[SettingsProfileController::class,  'destroy'])->name('settings.profile.destroy');
+
+    Route::get('/parametres/password',  [SettingsPasswordController::class, 'edit'])->name('settings.password.edit');
+    Route::put('/parametres/password',  [SettingsPasswordController::class, 'update'])->name('settings.password.update');
+
+    Route::get('/parametres/appearance', fn () => Inertia::render('settings/appearance'))->name('settings.appearance');
 });
 
+/* ----------------------- ADMIN ------------------------------- */
+// ⬅️ Groupe admin existant (conservé). Pour éviter le conflit d’URL,
+// je renomme juste l’ancienne page en “/admin/admin-organizers-old”.
+Route::middleware(['auth','role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/dashboard',           [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/admin-organizers-old', fn () => Inertia::render('admin/AdminOrganizers'))->name('organizers'); // ancien rendu direct conservé
+        Route::get('/identity-validation', fn () => Inertia::render('admin/IdentityValidation'))->name('identity.validation');
+        Route::get('/statistics',          fn () => Inertia::render('admin/Statistics'))->name('statistics');
+        Route::get('/admin-activities',    [AdminActivitiesController::class, 'index'])->name('activities');
+    });
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN (protégé)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard',          fn () => Inertia::render('admin/AdminDashboard'))->name('admin.dashboard');
-    Route::get('/admin/admin-organizers',   fn () => Inertia::render('admin/AdminOrganizers'))->name('admin.organizers');
-    Route::get('/admin/identity-validation',fn () => Inertia::render('admin/IdentityValidation'))->name('admin.identity.validation');
-    Route::get('/admin/statistics',         fn () => Inertia::render('admin/Statistics'))->name('admin.statistics');
-    Route::get('/admin/admin-activities',   [AdminActivitiesController::class, 'index'])->name('admin.activities');
-});
 
-// autres fichiers de routes si tu en as besoin
-// require __DIR__.'/settings.php';
-// require __DIR__.'/auth.php';
+Route::middleware(['auth', AdminMiddleware::class])
+    ->prefix('admin')->name('admin.')
+    ->group(function () {
+        Route::get('/admin-organizers', [AdminOrganizersController::class, 'index'])
+            ->name('organizers.index');
+        Route::delete('/users/{user}', [AdminOrganizersController::class, 'destroy'])
+            ->name('users.destroy');
+    });
+
+
+Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
+    ->prefix('admin')->name('admin.')
+    ->group(function () {
+        // Liste des pièces à valider
+        Route::get('/identity-validation', [IdentityValidationController::class, 'index'])
+            ->name('identity.validation');
+
+        // Actions
+        Route::patch('/identity-validation/{user}/approve', [IdentityValidationController::class, 'approve'])
+            ->whereNumber('user')->name('identity.approve');
+
+        Route::patch('/identity-validation/{user}/reject', [IdentityValidationController::class, 'reject'])
+            ->whereNumber('user')->name('identity.reject');
+    });
+
+
+Route::middleware(['auth','role:admin'])
+    ->prefix('admin')->name('admin.')
+    ->group(function () {
+        Route::get('/statistics', [StatisticsController::class, 'index'])
+            ->name('statistics');
+    });
+
+
+Route::get('/admin-activities', [AdminActivitiesController::class, 'index'])
+    ->name('admin.activities');
+
+Route::delete('/admin-activities/{activity}', [AdminActivitiesController::class, 'destroy'])
+    ->whereNumber('activity')
+    ->name('admin.activities.destroy');

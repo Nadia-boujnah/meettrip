@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class MessagesController extends Controller
 {
-    // ✉️ Créer une nouvelle conversation + premier message
+    // Créer une conversation + premier message
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -21,7 +21,7 @@ class MessagesController extends Controller
         $me = Auth::id();
         abort_if($data['contact_id'] === $me, 422, "Impossible de s'envoyer un message à soi-même.");
 
-        // On trie les ID pour éviter les doublons
+        // Ordonner les IDs pour éviter les doublons
         $one = min($me, $data['contact_id']);
         $two = max($me, $data['contact_id']);
 
@@ -30,7 +30,6 @@ class MessagesController extends Controller
             ['last_message_at' => now()]
         );
 
-        // Création du message
         Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => $me,
@@ -39,12 +38,11 @@ class MessagesController extends Controller
 
         $conversation->update(['last_message_at' => now()]);
 
-        // 🔁 Redirige vers la conversation créée
         return redirect()->route('messages.show', $conversation->id)
             ->with('success', 'Message envoyé avec succès');
     }
 
-    // 💬 Répondre dans une conversation existante
+    // Répondre dans une conversation existante
     public function reply(Request $request, Conversation $conversation)
     {
         abort_unless(in_array(Auth::id(), [$conversation->user_one_id, $conversation->user_two_id]), 403);

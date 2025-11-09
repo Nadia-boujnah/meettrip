@@ -5,22 +5,27 @@ import HeadingSmall from '@/components/heading-small';
 
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import SettingsTabs from '@/components/SettingsTabs';
+
 
 const breadcrumbs = [
     {
-        title: 'Appearance settings',
-        href: '/settings/appearance',
+        title: 'Paramètres d’apparence',
+        href: '/parametres/appearance',
     },
 ];
 
 export default function Appearance() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Appearance settings" />
+            <Head title="Paramètres d’apparence" />
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Appearance settings" description="Update your account's appearance settings" />
+                    <HeadingSmall
+                        title="Apparence du compte"
+                        description="Personnalisez le thème et les préférences d’affichage de votre compte."
+                    />
                     <AppearanceTabs />
                 </div>
             </SettingsLayout>

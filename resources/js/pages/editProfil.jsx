@@ -1,106 +1,177 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 
-export default function editProfil() {
-  const [form, setForm] = useState({
-    prenom: 'Nadia',
-    nom: 'Boujnah',
-    location: 'Cannes, France',
-    bio: `Passionnée de voyages et de nouvelles rencontres.\nJ’aime découvrir de nouvelles spécialités et endroits.`,
-    photo: null,
-    pieceIdentite: null,
+export default function EditProfil() {
+  const { props } = usePage();
+  const user = props?.user || {};
+
+  // Fallback si Ziggy n'est pas dispo : on enverra sur /profil (PUT)
+  const updateUrl = useMemo(() => {
+    try {
+      // @ts-ignore
+      return typeof route === 'function' ? route('profile.update') : '/profil';
+    } catch {
+      return '/profil';
+    }
+  }, []);
+
+  const { data, setData, post, processing, errors, progress } = useForm({
+    _method: 'put',
+    prenom: user.prenom || '',
+    nom: user.nom || '',
+    location: user.location || '',
+    bio: user.bio || '',
+    avatar: null,
+    document: null,
   });
 
+  const [preview, setPreview] = useState(user?.avatar || user?.photo || '/images/default-avatar.png');
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  // Si jamais la page n'a pas reçu "user" (mauvaise route côté PHP)
+  if (!props?.user) {
+    return (
+      <AppLayout>
+        <Head title="Modifier mon profil" />
+        <div className="max-w-xl mx-auto px-6 py-12 text-center text-gray-500">
+          Impossible de charger le profil. Vérifie que la route pointe bien sur
+          <code className="mx-1 bg-gray-100 px-1 rounded">ProfileController@edit</code>
+          et que cette action envoie <code>user</code> dans les props.
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const onChangeAvatar = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setData('avatar', file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const onChangeDoc = (e) => {
+    const file = e.target.files?.[0];
+    if (file) setData('document', file);
+  };
+
+  const submit = (e) => {
     e.preventDefault();
-    // Simule l'enregistrement
-    setMessage('✔️ Modifications enregistrées (simulées)');
-    setTimeout(() => setMessage(''), 3000);
+
+    // Document requis si aucun déjà présent
+    if (!data.document && !user.document) {
+      setMessage("⚠️ La pièce d'identité est obligatoire pour vérifier le compte.");
+      setTimeout(() => setMessage(''), 3500);
+      return;
+    }
+
+    post(updateUrl, {
+      forceFormData: true, // indispensable pour les fichiers
+      onSuccess: () => {
+        setMessage('✔️ Profil mis à jour avec succès.');
+        setTimeout(() => setMessage(''), 2500);
+      },
+    });
   };
 
   return (
     <AppLayout>
       <Head title="Modifier mon profil" />
 
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
-        <h1 className="text-2xl font-semibold text-center">Modifier mon Profil</h1>
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <h1 className="text-2xl font-semibold text-center mb-6">Modifier mon Profil</h1>
 
         {message && (
-          <div className="text-green-600 text-sm text-center font-medium">
+          <div className="mb-4 text-center text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded">
             {message}
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {/* Prénom et Nom */}
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Prénom"
-              value={form.prenom}
-              onChange={(e) => setForm({ ...form, prenom: e.target.value })}
-              className="flex-1 p-2 border rounded"
+        <form onSubmit={submit} className="bg-white p-6 rounded-xl shadow space-y-6">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-3">
+            <img
+              src={preview}
+              alt="Aperçu avatar"
+              className="w-28 h-28 rounded-full object-cover ring-2 ring-gray-100"
             />
-            <input
-              type="text"
-              placeholder="Nom"
-              value={form.nom}
-              onChange={(e) => setForm({ ...form, nom: e.target.value })}
-              className="flex-1 p-2 border rounded"
-            />
+            <label className="cursor-pointer bg-gray-100 border px-3 py-2 rounded hover:bg-gray-200">
+              📷 Joindre une photo
+              <input type="file" className="hidden" accept="image/*" onChange={onChangeAvatar} />
+            </label>
+            {errors.avatar && <p className="text-sm text-red-600">{errors.avatar}</p>}
+          </div>
+
+          {/* Prénom / Nom */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-gray-700">Prénom</label>
+              <input
+                value={data.prenom}
+                onChange={(e) => setData('prenom', e.target.value)}
+                className="w-full border p-2 rounded"
+              />
+              {errors.prenom && <p className="text-sm text-red-600">{errors.prenom}</p>}
+            </div>
+            <div>
+              <label className="text-sm text-gray-700">Nom</label>
+              <input
+                value={data.nom}
+                onChange={(e) => setData('nom', e.target.value)}
+                className="w-full border p-2 rounded"
+              />
+              {errors.nom && <p className="text-sm text-red-600">{errors.nom}</p>}
+            </div>
           </div>
 
           {/* Localisation */}
-          <input
-            type="text"
-            placeholder="Localisation"
-            value={form.location}
-            onChange={(e) => setForm({ ...form, location: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
-
-          {/* Bio */}
-          <textarea
-            placeholder="À propos de moi"
-            value={form.bio}
-            onChange={(e) => setForm({ ...form, bio: e.target.value })}
-            rows={4}
-            className="w-full p-2 border rounded"
-          />
-
-          {/* Fichiers */}
-          <div className="flex items-center gap-4">
-            <label className="w-1/2 border rounded p-4 text-center cursor-pointer">
-              📷 Joindre une photo
-              <input
-                type="file"
-                className="hidden"
-                onChange={(e) => setForm({ ...form, photo: e.target.files[0] })}
-              />
-            </label>
-            <label className="w-1/2 border rounded p-4 text-center cursor-pointer">
-              📄 Joindre une pièce d'identité
-              <input
-                type="file"
-                className="hidden"
-                onChange={(e) =>
-                  setForm({ ...form, pieceIdentite: e.target.files[0] })
-                }
-              />
-            </label>
+          <div>
+            <label className="text-sm text-gray-700">Localisation</label>
+            <input
+              value={data.location}
+              onChange={(e) => setData('location', e.target.value)}
+              className="w-full border p-2 rounded"
+            />
+            {errors.location && <p className="text-sm text-red-600">{errors.location}</p>}
           </div>
 
-          {/* Bouton Enregistrer */}
-          <div className="text-center pt-4">
+          {/* Bio */}
+          <div>
+            <label className="text-sm text-gray-700">À propos</label>
+            <textarea
+              rows={4}
+              value={data.bio}
+              onChange={(e) => setData('bio', e.target.value)}
+              className="w-full border p-2 rounded"
+            />
+            {errors.bio && <p className="text-sm text-red-600">{errors.bio}</p>}
+          </div>
+
+          {/* Pièce d'identité */}
+          <div className="text-center">
+            <label className="block border rounded p-4 cursor-pointer hover:bg-gray-50">
+              📄 Joindre une pièce d'identité
+              <input type="file" className="hidden" accept="image/*,.pdf" onChange={onChangeDoc} />
+            </label>
+            {errors.document && <p className="text-sm text-red-600 mt-1">{errors.document}</p>}
+            {progress && (
+              <p className="text-xs text-gray-500 mt-1">Upload… {progress.percentage}%</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-center gap-3 pt-2">
             <button
               type="submit"
-              className="px-6 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
+              disabled={processing}
+              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             >
               Enregistrer
             </button>
+            <Link href={typeof route === 'function' ? route('profile.me') : '/profil'} className="border px-6 py-2 rounded hover:bg-gray-50">
+              Annuler
+            </Link>
           </div>
         </form>
       </div>
