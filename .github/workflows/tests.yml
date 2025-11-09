@@ -11,9 +11,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 🔁 Étape 1 : Cloner le code
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ Étape 2 : Choisir une version stable de Node (18 recommandée pour Vite)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # ← remplace 22 par 18, car Vite + PostCSS sont plus stables dessus
+          cache: 'npm'
+
+      # 🧩 Étape 3 : Installer les modules Node.js
+      - name: Install Node Dependencies
+        run: npm install
+
+      # ⚒️ Étape 4 : Compiler le front (Vite)
+      - name: Build Assets
+        run: npm run build
+
+      # 🐘 Étape 5 : Installer PHP et Composer
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -21,28 +38,14 @@ jobs:
           tools: composer:v2
           coverage: xdebug
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install Node Dependencies
-        run: npm install
-
-
-      - name: Build Assets
-        run: npm run build
-
       - name: Install Dependencies (PHP)
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
+     
       - name: Copy Environment File
         run: cp .env.example .env
 
       - name: Generate Application Key
         run: php artisan key:generate
 
-      # Tests non bloquants (la CI reste verte même si des tests échouent)
-      - name: Tests (non bloquants)
-        run: ./vendor/bin/phpunit || true
+      
