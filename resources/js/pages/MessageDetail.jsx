@@ -3,17 +3,27 @@ import { Head, usePage, Link, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
 /**
- * Détail d'une conversation
- * - Marquage "lu" est fait côté back (ConversationsController@show)
- * - Affiche l'image d'activité via conversation.activity.image_url
- * - Envoi d'un message -> POST messages.reply
+ * Page Détail d'une conversation
+ * - Le marquage “lu” est géré côté back (ConversationsController@show)
+ * - J’affiche ici tous les messages échangés avec une personne.
+ * - Si la conversation est liée à une activité, je montre la fiche en haut.
+ * - L’envoi d’un message appelle la route Laravel "messages.reply".
  */
 export default function MessageDetail() {
+  // Je récupère les données envoyées par Inertia (la conversation + les messages)
   const { conversation, messages = [] } = usePage().props;
 
+  // Texte du message à envoyer
   const [text, setText] = useState('');
+
+  // Id de la conversation (utile pour l’envoi)
   const convId = conversation?.id;
 
+  /**
+   * organiserLabel
+   * -> je formate le nom complet de mon interlocuteur (prénom + nom)
+   *    avec useMemo pour éviter de recalculer à chaque rendu
+   */
   const organizerLabel = useMemo(() => {
     const o = conversation?.other;
     if (!o) return '';
@@ -22,8 +32,10 @@ export default function MessageDetail() {
     return `${f} ${l}`.trim();
   }, [conversation]);
 
+  // Image de couverture de l’activité liée à la conversation
   const activityCover = conversation?.activity?.image_url || null;
 
+  // Je convertis les dates ISO en format lisible (français)
   const humanDate = (iso) => {
     try {
       return new Date(iso).toLocaleString('fr-FR');
@@ -32,13 +44,24 @@ export default function MessageDetail() {
     }
   };
 
+  /**
+   * Envoi d’un nouveau message
+   * -> j’empêche le rechargement de page
+   * -> j’envoie le contenu via router.post vers la route Laravel
+   * -> si tout se passe bien, je vide le champ de saisie
+   */
   const onSend = (e) => {
     e.preventDefault();
     if (!text.trim() || !convId) return;
 
-    router.post(route('messages.reply', convId), { body: text.trim() }, { onSuccess: () => setText('') });
+    router.post(
+      route('messages.reply', convId),
+      { body: text.trim() },
+      { onSuccess: () => setText('') }
+    );
   };
 
+  // Cas où l’URL ne correspond à aucune conversation
   if (!convId) {
     return (
       <AppLayout>
@@ -56,9 +79,11 @@ export default function MessageDetail() {
 
   return (
     <AppLayout>
+      {/* Je change le titre de l’onglet selon la personne avec qui je parle */}
       <Head title={`Conversation avec ${organizerLabel || 'contact'}`} />
 
       <div className="p-6 max-w-3xl mx-auto space-y-6">
+        {/* Titre + lien de retour */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Conversation</h1>
           <Link href={route('messagerie')} className="text-sm text-blue-600 hover:underline">
@@ -66,11 +91,15 @@ export default function MessageDetail() {
           </Link>
         </div>
 
-        {/* Carte activité liée */}
+        {/* Bloc d’infos de l’activité associée (si la conversation est liée à une activité) */}
         {conversation.activity && (
           <div className="flex items-start gap-4 bg-gray-50 p-4 rounded shadow-sm">
             {activityCover ? (
-              <img src={activityCover} alt={conversation.activity.title} className="w-20 h-20 object-cover rounded" />
+              <img
+                src={activityCover}
+                alt={conversation.activity.title}
+                className="w-20 h-20 object-cover rounded"
+              />
             ) : null}
             <div>
               <h2 className="font-semibold">{conversation.activity.title}</h2>
@@ -84,7 +113,7 @@ export default function MessageDetail() {
           </div>
         )}
 
-        {/* Liste des messages */}
+        {/* Zone listant tous les messages échangés */}
         <div className="bg-white p-4 rounded-xl shadow space-y-3 max-h-[420px] overflow-y-auto">
           {messages.length === 0 ? (
             <p className="text-sm text-gray-400 italic">Aucun message pour le moment.</p>
@@ -92,16 +121,23 @@ export default function MessageDetail() {
             messages.map((m) => (
               <div key={m.id} className="flex">
                 <div className="px-4 py-2 rounded-lg max-w-[80%] text-sm bg-gray-100 text-gray-800">
+                  {/* Nom de la personne qui a envoyé le message */}
                   <div className="text-[12px] font-medium text-gray-600">{m.from_name}</div>
+
+                  {/* Corps du message */}
                   <div className="whitespace-pre-wrap">{m.body}</div>
-                  <div className="text-[11px] mt-1 text-right opacity-70">{humanDate(m.date)}</div>
+
+                  {/* Date et heure du message, affichées en petit */}
+                  <div className="text-[11px] mt-1 text-right opacity-70">
+                    {humanDate(m.date)}
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {/* Composer */}
+        {/* Formulaire d’envoi d’un nouveau message */}
         <form onSubmit={onSend} className="flex gap-2">
           <input
             type="text"

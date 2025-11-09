@@ -1,4 +1,3 @@
-// resources/js/Pages/admin/AdminOrganizers.jsx
 import AppLayout from '@/layouts/app-layout.jsx';
 import { Head, usePage, router, Link } from '@inertiajs/react';
 import { Trash2 } from 'lucide-react';
@@ -7,14 +6,20 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 export default function AdminOrganizers() {
+  // Je récupère depuis Inertia :
+  // - organizers : liste paginée des organisateurs
+  // - participants : liste simple des participants
+  // - filters : valeurs actuelles des filtres (recherche, date, perPage)
   const { organizers, participants, filters } = usePage().props;
+
+  // États locaux pour piloter les filtres côté client
   const [search, setSearch] = useState(filters?.search ?? '');
   const [selectedDate, setSelectedDate] = useState(filters?.date ? new Date(filters.date) : null);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);     // ouverture/fermeture de la modale document
+  const [selectedUser, setSelectedUser] = useState(null); // utilisateur dont on affiche le document
   const [perPage, setPerPage] = useState(filters?.perPage ?? 10);
 
-  // Debounce des filtres -> rafraîchit côté serveur
+  // Délai court avant d’envoyer les filtres au serveur (évite une requête à chaque frappe)
   useEffect(() => {
     const t = setTimeout(() => {
       router.get(
@@ -30,11 +35,13 @@ export default function AdminOrganizers() {
     return () => clearTimeout(t);
   }, [search, selectedDate, perPage]);
 
+  // Suppression d’un compte utilisateur après confirmation
   const handleDelete = (id) => {
     if (!confirm('Supprimer ce compte ?')) return;
     router.delete(route('admin.users.destroy', id), { preserveScroll: true });
   };
 
+  // Lignes du tableau : je prends la page courante côté serveur
   const rows = organizers?.data ?? [];
 
   return (
@@ -43,7 +50,7 @@ export default function AdminOrganizers() {
       <div className="p-6 bg-white text-[#1B1B18] space-y-10">
         <h1 className="text-3xl font-bold mb-4">Profils des organisateurs</h1>
 
-        {/* Filtres */}
+        {/* Filtres principaux : recherche, date d'inscription, éléments par page */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
           <input
             type="text"
@@ -52,6 +59,8 @@ export default function AdminOrganizers() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+
+          {/* Sélecteur de date (filtre sur la date d'inscription) */}
           <DatePicker
             selected={selectedDate}
             onChange={(date) => setSelectedDate(date)}
@@ -60,6 +69,8 @@ export default function AdminOrganizers() {
             dateFormat="yyyy-MM-dd"
             isClearable
           />
+
+          {/* Choix du nombre d'éléments par page */}
           <select
             className="px-3 py-2 border rounded shadow-sm"
             value={perPage}
@@ -71,7 +82,7 @@ export default function AdminOrganizers() {
           </select>
         </div>
 
-        {/* Tableau organisateurs */}
+        {/* Tableau des organisateurs (paginé côté serveur) */}
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">
@@ -94,6 +105,10 @@ export default function AdminOrganizers() {
                   <td className="px-4 py-3 font-medium text-gray-900">{user.prenom}</td>
                   <td className="px-4 py-3 text-gray-700">{user.nom}</td>
                   <td className="px-4 py-3 text-gray-500">{user.email ?? '—'}</td>
+
+                  {/* Colonne "Vérifié"
+                     - Si Oui : j’affiche Oui et un bouton "Voir" si un document est disponible
+                     - Sinon : j’affiche En attente ou Non avec une couleur adaptée */}
                   <td className="px-4 py-3">
                     {String(user.verifie).toLowerCase() === 'oui' ? (
                       <>
@@ -113,7 +128,11 @@ export default function AdminOrganizers() {
                       </span>
                     )}
                   </td>
+
+                  {/* Date d'inscription formatée côté back (affichée telle quelle) */}
                   <td className="px-4 py-3 text-gray-500">{user.inscription}</td>
+
+                  {/* Action : suppression du compte */}
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleDelete(user.id)}
@@ -126,6 +145,7 @@ export default function AdminOrganizers() {
                 </tr>
               ))}
 
+              {/* État vide si aucun résultat */}
               {rows.length === 0 && (
                 <tr><td className="px-4 py-6 text-gray-500" colSpan={7}>Aucun résultat.</td></tr>
               )}
@@ -133,7 +153,7 @@ export default function AdminOrganizers() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination construite côté Laravel (organizers.links) */}
         {organizers?.links && organizers.links.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {organizers.links.map((l, idx) => (
@@ -149,7 +169,7 @@ export default function AdminOrganizers() {
           </div>
         )}
 
-        {/* Participants */}
+        {/* Tableau des participants (liste simple, même structure de colonnes) */}
         <div className="mt-16">
           <h2 className="text-2xl font-bold mb-4">Profils des participants</h2>
           <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -199,7 +219,7 @@ export default function AdminOrganizers() {
           </div>
         </div>
 
-        {/* Modale document */}
+        {/* Modale d’aperçu du document officiel (si présent) */}
         {showModal && selectedUser && (
           <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center">
             <div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-xl relative">

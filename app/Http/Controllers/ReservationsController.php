@@ -201,4 +201,38 @@ class ReservationsController extends Controller
 
         return back()->with('success', 'Réservation refusée.');
     }
+        /**
+     * ORGANISATEUR — Mettre à jour le statut (accepted / declined / pending)
+     * PATCH /host/reservations/{activity}/{guest}/status
+     */
+    public function updateStatus(Request $request, int $activityId, int $guestId)
+    {
+        $hostId = Auth::id();
+
+        $data = $request->validate([
+            'status' => 'required|string|in:pending,accepted,declined',
+        ]);
+
+        $updated = DB::table('activity_user')
+            ->where('activity_id', $activityId)
+            ->where('user_id', $guestId)
+            ->where('host_id', $hostId)
+            ->update([
+                'status'     => $data['status'],
+                'updated_at' => now(),
+            ]);
+
+        if (!$updated) {
+            return back()->with('error', 'Impossible de modifier le statut de cette demande.');
+        }
+
+        $labels = [
+            'pending'  => 'remise en attente',
+            'accepted' => 'acceptée',
+            'declined' => 'refusée',
+        ];
+
+        return back()->with('success', 'Réservation '.$labels[$data['status']].'.');
+    }
+
 }

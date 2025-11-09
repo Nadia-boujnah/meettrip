@@ -1,115 +1,100 @@
+// resources/js/Pages/MyReservations.jsx
 import AppLayout from '@/layouts/app-layout';
-import { Head, usePage, Link } from '@inertiajs/react';
-import { BadgeCheck, Clock, XCircle } from 'lucide-react';
-import { resolveAssetImage } from '@/utils/resolveAssetImage';
+import { Head, usePage } from '@inertiajs/react';
 
-export default function MyReservations() {
-  const { reservations = [] } = usePage().props;
+/**
+ * activityImage
+ * Mon petit helper pour afficher la bonne image d’une réservation.
+ *    - Si le back m’envoie une URL complète (image_url), je l’utilise directement.
+ *    - Sinon, si j’ai un chemin storage de Laravel (activities/xxx.jpg), je reconstruis l’URL publique.
+ *    - Sinon, je tombe sur un placeholder propre pour éviter une image cassée.
+ *    Objectif : couvrir les différentes sources d’images (CDN, storage, fallback).
+ */
+function activityImage(activity) {
+  if (activity?.image_url) return activity.image_url;
+  if (activity?.image?.startsWith('activities/')) return `/storage/${activity.image}`;
+  return '/images/placeholder.png';
+}
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded">
-            <Clock className="w-4 h-4" /> En attente
-          </span>
-        );
-      case 'accepted':
-        return (
-          <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
-            <BadgeCheck className="w-4 h-4" /> Validé
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">
-            <XCircle className="w-4 h-4" /> Refusé
-          </span>
-        );
-      default:
-        return null;
-    }
+/**
+ * StatusBadge
+ * Un composant visuel très simple qui traduit un statut technique en badge lisible.
+ *    - Je mappe les 3 statuts possibles vers un libellé FR + des couleurs Tailwind.
+ *    - accepted  => “Validé” (vert)
+ *    - pending   => “En attente” (ambre)
+ *    - declined  => “Refusé” (rose)
+ *    - Si je reçois autre chose ou rien, je n’affiche pas de badge.
+ */
+function StatusBadge({ status }) {
+  if (!status) return null;
+
+  const map = {
+    accepted: { text: 'Validé',    className: 'bg-emerald-100 text-emerald-800' },
+    pending:  { text: 'En attente', className: 'bg-amber-100 text-amber-800' },
+    declined: { text: 'Refusé',    className: 'bg-rose-100 text-rose-800' },
   };
 
- // 👇 NE PLUS TOMBER SUR /storage/** quand l'image est un asset
-const pickImage = (res) => {
-  // 1) D'abord : essayer les assets du front (resources/js/assets/**)
-  const asset = resolveAssetImage(res.image);
-  if (asset) return asset;
+  const data = map[status] || null;
+  if (!data) return null;
 
-  // 2) Ensuite : une URL publique (CDN/externe)
-  if (res.image && /^https?:\/\//i.test(res.image)) return res.image;
+  return (
+    <div className={`mt-2 text-sm px-3 py-1 rounded ${data.className}`}>
+      {data.text}
+    </div>
+  );
+}
 
-  // 3) Enfin : image stockée côté Laravel (si tu en utilises un jour)
-  if (res.image_url) return res.image_url;
-
-  // Pas d'image trouvée
-  return null;
-};
-
+export default function MyReservations() {
+  // Je récupère la liste de MES réservations que le back m’envoie via Inertia.
+  // Par défaut, je garde un tableau vide pour éviter les crash si rien n’est passé.
+  const { reservations = [] } = usePage().props;
 
   return (
     <AppLayout>
+      {/* Je règle le <title> de la page (accessibilité + SEO) */}
       <Head title="Mes réservations" />
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
         <h1 className="text-2xl font-semibold">Mes réservations</h1>
 
+        {/* État vide : je l’affiche clairement si je n’ai aucune réservation */}
         {reservations.length === 0 ? (
-          <p className="text-gray-500">Vous n'avez encore réservé aucune activité.</p>
+          <p className="text-neutral-500">Vous n’avez encore aucune réservation.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reservations.map((res) => {
-              const img = pickImage(res);
-              const host = res.host_user || {};
+          // Sinon j’affiche une grille responsive de cartes (1 / 2 / 3 colonnes selon la taille)
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {reservations.map((a) => (
+              <div key={a.id} className="rounded border overflow-hidden bg-white">
+                {/* Image de l’activité (lazy loading pour de meilleures perfs) */}
+                <img
+                  src={activityImage(a)}
+                  alt={a.title}
+                  className="w-full h-48 object-cover"
+                  loading="lazy"
+                />
 
-              return (
-                <div key={res.id} className="bg-white rounded-xl shadow overflow-hidden">
-                  {img && (
-                    <img
-                      src={img}
-                      alt={res.title}
-                      className="h-48 w-full object-cover"
-                    />
-                  )}
+                <div className="p-4 space-y-2">
+                  {/* Titre + infos lieu/date (je prends a.date sinon la 1ère date de a.dates si dispo) */}
+                  <h2 className="text-lg font-medium">{a.title}</h2>
+                  <p className="text-sm text-neutral-600">
+                    {a.location} {a.date ? `– ${a.date}` : (a.dates?.length ? `– ${a.dates[0]}` : '')}
+                  </p>
 
-                  <div className="p-4 space-y-2">
-                    <h2 className="font-semibold text-lg">{res.title}</h2>
+                  {/* Badge lisible du statut (accepted / pending / declined) */}
+                  <StatusBadge status={a.status} />
 
-                    <p className="text-sm text-gray-600">
-                      {res.location} {res.date ? `– ${res.date}` : ''}
-                    </p>
-
-                    {Array.isArray(res.dates) && res.dates.length > 0 && (
-                      <p className="text-sm text-gray-500">
-                        Dates : {res.dates.join(', ')}
-                      </p>
-                    )}
-
-                    {res.requested_date && (
-                      <p className="text-sm text-gray-500">
-                        Date choisie : {res.requested_date}
-                      </p>
-                    )}
-
-                    <div className="flex flex-col space-y-2 mt-2">
-                      {getStatusBadge(res.status)}
-
-                      {host?.id && (
-                        <Link
-                          href={typeof route === 'function'
-                            ? route('messagerie.user.activity', [host.id, res.id])
-                            : `/messagerie/${host.id}/${res.id}`
-                          }
-                          className="inline-block bg-blue-500 text-white text-sm px-4 py-2 rounded hover:bg-blue-600 transition"
-                        >
-                          Contacter l'organisateur
-                        </Link>
-                      )}
-                    </div>
+                  {/* CTA : j’offre un raccourci pour écrire à l’organisateur depuis la messagerie */}
+                  <div className="pt-3">
+                    <a
+                      href={route('messagerie.user', a.host_user?.id ?? 0)}
+                      className="inline-flex items-center justify-center w-full px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                    >
+                      Contacter l’organisateur
+                    </a>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>

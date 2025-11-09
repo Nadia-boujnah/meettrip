@@ -15,11 +15,14 @@ import {
 } from 'chart.js';
 import { Line, Pie } from 'react-chartjs-2';
 
+// J’enregistre les modules Chart.js dont j’ai besoin pour les graphiques
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ArcElement);
 
 export default function Statistics() {
+  // Je récupère toutes les stats calculées côté back (totaux + séries + rôles)
   const { stats } = usePage().props;
 
+  // Petites cartes KPI en haut : je liste le libellé et la valeur à afficher
   const cards = [
     { label: 'Utilisateurs inscrits', value: stats.users },
     { label: 'Comptes validés',      value: stats.validated },
@@ -27,21 +30,22 @@ export default function Statistics() {
     { label: 'Identités à valider',  value: stats.identitiesToValidate },
   ];
 
-  // Line chart (12 mois, année courante passée par le back)
+  // Données de la courbe (12 mois) – l’année m’est envoyée par le back
   const lineData = {
     labels: ['Janv', 'Fév', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'],
     datasets: [
       {
         label: `Activités créées (${stats.year})`,
-        data: stats.series,
+        data: stats.series,           // une valeur par mois
         borderColor: '#3B82F6',
         backgroundColor: '#3B82F6',
-        tension: 0.3,
-        fill: false,
+        tension: 0.3,                 // légère courbure
+        fill: false,                  // je n’affiche pas d’aire sous la ligne
       },
     ],
   };
 
+  // Options d’affichage de la courbe : titre, légende, axes lisibles
   const lineOptions = {
     responsive: true,
     plugins: {
@@ -54,8 +58,9 @@ export default function Statistics() {
     },
   };
 
-  // Pie chart répartition des statuts (validés vs en attente/rejetés)
-  const pendingLike = Math.max(0, stats.users - stats.validated); // approximation simple
+  // Camembert : part “validés” vs “à valider / refusés”
+  // Ici j’estime la part non-validée par (utilisateurs - validés) pour une lecture rapide
+  const pendingLike = Math.max(0, stats.users - stats.validated);
   const pieData = {
     labels: ['Comptes validés', 'En attente / refusés'],
     datasets: [
@@ -81,7 +86,7 @@ export default function Statistics() {
       <div className="p-6 bg-white text-[#1B1B18] space-y-10">
         <h1 className="text-3xl font-bold mb-6">Statistiques générales</h1>
 
-        {/* Cartes */}
+        {/* Cartes KPI : je mappe la liste ci-dessus pour afficher les 4 chiffres clés */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {cards.map((item, i) => (
             <div key={i} className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
@@ -91,12 +96,12 @@ export default function Statistics() {
           ))}
         </div>
 
-        {/* Courbe */}
+        {/* Courbe d’évolution des activités sur l’année */}
         <div className="bg-white rounded-xl shadow p-6">
           <Line data={lineData} options={lineOptions} />
         </div>
 
-        {/* Camembert */}
+        {/* Camembert des statuts de comptes */}
         <div className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-bold mb-4">Répartition des statuts de comptes</h2>
           <div className="w-[340px] mx-auto">
@@ -104,7 +109,7 @@ export default function Statistics() {
           </div>
         </div>
 
-        {/* Rôles */}
+        {/* Répartition des rôles (organisateurs vs participants) */}
         <div className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-bold mb-4">Répartition des rôles</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

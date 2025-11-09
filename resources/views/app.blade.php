@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Force le thème sombre dès le chargement si le système est en dark --}}
+    {{-- Force le thème sombre si le système est en dark --}}
     <script>
       (function () {
         const appearance = '{{ $appearance ?? "system" }}';
@@ -26,9 +26,8 @@
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
     @routes
-    @viteReactRefresh
-    {{-- ⚠️ Entrée unique : ne pas charger les pages individuellement --}}
-    @vite('resources/js/app.jsx')
+    {{-- Production: charge les assets buildés (CSS + JS) --}}
+    @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead
   </head>
   <body class="font-sans antialiased">

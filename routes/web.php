@@ -83,7 +83,7 @@ Route::get('/', function () {
             'image_url' => $a->image_url,
         ]);
 
-    return Inertia::render('PublicPages/home', [
+    return Inertia::render('PublicPages/Home', [
         'latestActivities' => $latest,
         'mapActivities'    => $forMap,
     ]);
@@ -169,6 +169,8 @@ Route::middleware(['auth'])->group(function () {
         ->whereNumber(['activity','guest'])->name('host.reservations.accept');
     Route::patch('/host/reservations/{activity}/{guest}/decline', [ReservationsController::class, 'decline'])
         ->whereNumber(['activity','guest'])->name('host.reservations.decline');
+        Route::patch('/host/reservations/{activity}/{guest}/status', [ReservationsController::class, 'updateStatus'])
+    ->whereNumber(['activity','guest'])->name('host.reservations.status');
 
     // Activities Connected
     Route::get('/activitesconnected',  [ActivitiesConnectedController::class, 'index'])->name('activities.connected');
@@ -240,8 +242,6 @@ Route::middleware(['auth'])->group(function () {
 });
 
 /* ----------------------- ADMIN ------------------------------- */
-// ⬅️ Groupe admin existant (conservé). Pour éviter le conflit d’URL,
-// je renomme juste l’ancienne page en “/admin/admin-organizers-old”.
 Route::middleware(['auth','role:admin'])
     ->prefix('admin')
     ->name('admin.')

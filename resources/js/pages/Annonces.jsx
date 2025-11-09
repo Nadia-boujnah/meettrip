@@ -3,29 +3,34 @@ import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function Annonces() {
+  // Je lis les props injectées par Inertia (liste des activités déjà créées)
   const { props } = usePage();
   const activitiesProp = Array.isArray(props?.activities) ? props.activities : [];
 
-  const [showForm, setShowForm] = useState(false);
-  const [annonces, setAnnonces] = useState([]);
-  const [cityOptions, setCityOptions] = useState([]);
+  // États d’affichage et de données locales
+  const [showForm, setShowForm] = useState(false); // afficher / cacher le formulaire inline
+  const [annonces, setAnnonces] = useState([]);    // copie locale des annonces pour refresh rapide
+  const [cityOptions, setCityOptions] = useState([]); // suggestions de villes
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const searchAbortRef = useRef(null);
+  const searchAbortRef = useRef(null); // permet d’annuler une recherche en cours pour éviter les races
 
+  // Je synchronise ma copie locale quand les props changent
   useEffect(() => setAnnonces(activitiesProp), [activitiesProp]);
 
+  // useForm (Inertia) pour gérer les champs + erreurs + envoi
   const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
     title: '',
     location: '',
-    latitude: '',     
+    latitude: '',     // stocké en champ hidden (rempli par l’autocomplete)
     longitude: '',
     participants: 1,
     date: '',
     description: '',
     why: '',
-    image: null,
+    image: null,      // upload image (optionnel)
   });
 
+  // Je détermine si je peux soumettre (validation minimale côté front)
   const canSubmit = useMemo(
     () =>
       data.title.trim() &&
@@ -37,12 +42,14 @@ export default function Annonces() {
     [data]
   );
 
-  // --- Recherche de villes (depuis /cities/search)
+  // --- Autocomplete villes via ma route /cities/search (retour JSON)
   const searchCities = (q) => {
     const query = q?.trim();
+    // j’annule la requête précédente si elle n’est pas finie
     if (searchAbortRef.current) searchAbortRef.current.abort();
     const ctrl = new AbortController();
     searchAbortRef.current = ctrl;
+
     if (!query || query.length < 2) {
       setCityOptions([]);
       return;
@@ -51,9 +58,10 @@ export default function Annonces() {
     fetch(`/cities/search?q=${encodeURIComponent(query)}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : []))
       .then((list) => setCityOptions(Array.isArray(list) ? list : []))
-      .catch(() => {});
+      .catch(() => {}); // je silencie les erreurs réseau ici
   };
 
+  // Au clic sur une suggestion, je remplis location + lat/lng
   const handleSelectCity = (o) => {
     setData('location', o.label);
     setData('latitude', o.lat);
@@ -61,6 +69,7 @@ export default function Annonces() {
     setShowSuggestions(false);
   };
 
+  // Déclenche la recherche avec un petit debounce (200ms)
   useEffect(() => {
     const t = setTimeout(() => {
       searchCities(data.location);
@@ -69,36 +78,41 @@ export default function Annonces() {
     return () => clearTimeout(t);
   }, [data.location]);
 
-  // ✅ Envoi en FormData géré par Inertia grâce à forceFormData:true
+  //  Envoi du formulaire (multipart) — Inertia gère FormData grâce à forceFormData:true
   const submit = (e) => {
     e.preventDefault();
     post(route('activities.store'), {
       forceFormData: true,
       onSuccess: () => {
+        // Au succès : je nettoie tout et je replie le formulaire
         reset();
         clearErrors();
         setShowForm(false);
+        // Je refresh uniquement la clé 'activities' côté client pour recharger la liste
         router.reload({ only: ['activities'] });
       },
     });
   };
 
+  // Suppression d’une annonce (demande de confirmation)
   const handleDelete = (id) => {
     if (!confirm('Voulez-vous vraiment supprimer cette annonce ?')) return;
     router.delete(route('activities.destroy', id), {
       onSuccess: () => {
+        // Optimiste : j’enlève localement + je reload la source
         setAnnonces((prev) => prev.filter((a) => a.id !== id));
         router.reload({ only: ['activities'] });
       },
     });
   };
 
+  // Redirection vers la page d’édition dédiée
   const handleEdit = (id) => router.visit(route('activities.edit', id));
 
-  // ✅ Format date robuste
+  //  Formatage date robuste (j’uniformise en yyyy-MM-dd quand c’est possible)
   const formatDate = (d) => {
     if (!d) return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d; // déjà ISO
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d; // déjà ISO court
     const t = Date.parse(d);
     if (Number.isNaN(t)) return '';
     const dt = new Date(t);
@@ -111,12 +125,14 @@ export default function Annonces() {
     <AppLayout>
       <Head title="Mes annonces" />
       <div className="p-6 max-w-5xl mx-auto space-y-6">
+      {/* Titre de la page + bouton pour afficher ou masquer le formulaire */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">Mes annonces</h1>
           <button
             onClick={() => {
               setShowForm((v) => !v);
               if (showForm) {
+                // Si je ferme : je remets le form au propre
                 reset();
                 clearErrors();
                 setCityOptions([]);
@@ -128,6 +144,7 @@ export default function Annonces() {
           </button>
         </div>
 
+        {/* Formulaire inline de création */}
         {showForm && (
           <form onSubmit={submit} className="bg-white border rounded p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -143,7 +160,7 @@ export default function Annonces() {
                 {errors.title && <p className="text-red-600 text-xs mt-1">{errors.title}</p>}
               </div>
 
-              {/* LIEU = auto-complétion + remplissage lat/lng (cachés) */}
+              {/* LIEU = auto-complétion + lat/lng cachés */}
               <div className="relative">
                 <label className="block text-sm font-medium mb-1">Lieu</label>
                 <input
@@ -267,7 +284,7 @@ export default function Annonces() {
           </form>
         )}
 
-        {/* Liste */}
+        {/* Liste des annonces existantes */}
         {annonces.length === 0 ? (
           <p className="text-gray-500 text-sm">Aucune annonce pour le moment.</p>
         ) : (

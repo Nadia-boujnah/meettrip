@@ -1,8 +1,10 @@
+
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
 import React, { useEffect, useRef, useState } from 'react';
 
 export default function AnnoncesCreate() {
+  // useForm pour piloter les champs + erreurs + POST
   const { data, setData, post, processing, errors, reset } = useForm({
     title: '',
     location: '',
@@ -15,6 +17,7 @@ export default function AnnoncesCreate() {
     image: null,
   });
 
+  // Autocomplete de villes (mêmes mécaniques que sur Annonces.jsx)
   const [cityOptions, setCityOptions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchAbortRef = useRef(null);
@@ -30,6 +33,7 @@ export default function AnnoncesCreate() {
       .catch(()=>{});
   };
 
+  // Délai de 200 ms avant de lancer la recherche (évite d’appeler l’API à chaque frappe)
   useEffect(() => {
     const t = setTimeout(() => {
       searchCities(data.location);
@@ -38,6 +42,7 @@ export default function AnnoncesCreate() {
     return () => clearTimeout(t);
   }, [data.location]);
 
+  // Remplissage location + lat/lng depuis une suggestion
   const handleSelectCity = (o) => {
     setData('location', o.label);
     setData('latitude', o.lat);
@@ -45,11 +50,13 @@ export default function AnnoncesCreate() {
     setShowSuggestions(false);
   };
 
+  // Envoi multipart avec forceFormData
   const submit = (e) => {
     e.preventDefault();
     post(route('activities.store'), {
       forceFormData: true,
       onSuccess: () => {
+        // Je remets tous les champs à zéro
         reset('title','location','latitude','longitude','participants','date','description','why','image');
       },
     });
@@ -69,7 +76,7 @@ export default function AnnoncesCreate() {
             {errors.title && <p className="text-red-600 text-sm">{errors.title}</p>}
           </div>
 
-          {/* Lieu */}
+          {/* Lieu avec suggestions + lat/lng cachés */}
           <div className="relative">
             <label className="block text-sm font-medium mb-1">Lieu (Ville / Pays)</label>
             <input

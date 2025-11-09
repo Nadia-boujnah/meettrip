@@ -3,6 +3,7 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 
 // === Helper placé AVANT toute utilisation ===
+// Normalise différentes syntaxes de dates en yyyy-MM-dd (compatible <input type="date">)
 const toISODate = (val) => {
   if (!val) return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;            // yyyy-MM-dd
@@ -28,21 +29,24 @@ const toISODate = (val) => {
 };
 
 export default function AnnoncesEdit() {
+  // L’activité à éditer vient des props Inertia
   const { activity } = usePage().props;
 
-  // ⬇️ récupère post + transform pour envoyer _method: 'put'
+  // Je prépare useForm avec les valeurs existantes de l’activité
+  // et j’utilise transform pour envoyer une méthode PUT (override _method)
   const { data, setData, post, transform, processing, errors } = useForm({
     title: activity.title ?? '',
     location: activity.location ?? '',
     latitude: activity.latitude ?? '',
     longitude: activity.longitude ?? '',
     participants: activity.participants ?? 1,
-    date: toISODate(activity.date ?? ''), // ← normalisé
+    date: toISODate(activity.date ?? ''), // ← normalisé pour l’input type="date"
     description: activity.description ?? '',
     why: activity.why ?? '',
     image: null,
   });
 
+  // Autocomplete villes
   const [cityOptions, setCityOptions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchAbortRef = useRef(null);
@@ -73,14 +77,15 @@ export default function AnnoncesEdit() {
     setShowSuggestions(false);
   };
 
+  // Envoi multipart en POST + override PUT via transform
   const submit = (e) => {
     e.preventDefault();
-    // ✅ multipart + PUT => on envoie en POST avec override _method
+    //  multipart + PUT => on envoie en POST avec _method: 'put'
     transform((d) => ({ ...d, _method: 'put' }));
     post(route('activities.update', activity.id), {
       forceFormData: true,
       preserveScroll: true,
-      onFinish: () => transform((d) => d), // reset transform
+      onFinish: () => transform((d) => d), // je réinitialise transform après l’envoi
     });
   };
 
@@ -90,6 +95,7 @@ export default function AnnoncesEdit() {
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         <h1 className="text-2xl font-semibold">Modifier l’annonce</h1>
 
+        {/* Aperçu de l’image actuelle si disponible */}
         {activity.image_url && (
           <img src={activity.image_url} alt={activity.title} className="w-full h-48 object-cover rounded" />
         )}
@@ -144,8 +150,8 @@ export default function AnnoncesEdit() {
             <input
               type="date"
               className="w-full border px-3 py-2 rounded"
-              value={toISODate(data.date) || ''}
-              onChange={(e) => setData('date', toISODate(e.target.value))}
+              value={toISODate(data.date) || ''}               // je force l’ISO court dans l’input
+              onChange={(e) => setData('date', toISODate(e.target.value))} // et je normalise à la saisie
             />
             {errors.date && <p className="text-red-600 text-sm">{errors.date}</p>}
           </div>

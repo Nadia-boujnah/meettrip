@@ -1,68 +1,95 @@
 import { Link } from '@inertiajs/react';
 
-// Import automatique des images locales (fallback visuel si besoin)
-const images = import.meta.glob('@/assets/images/*', { eager: true });
-const resolveLocalImage = (name) => {
-  if (!name) return null;
-  const key = `/resources/js/assets/images/${name}`;
-  return images[key]?.default ?? null;
-};
-
 export default function ActivityCard({ activity }) {
-  // 🖼️ Détermination intelligente de la source de l’image
-  const imageSrc =
-    // 1️⃣ URL calculée par Laravel (accessor image_url)
-    activity?.image_url
-      ? activity.image_url
-      // 2️⃣ Ancien chemin stocké directement (public/activities)
-      : activity?.image?.startsWith('activities/')
-      ? `/${activity.image}`
-      // 3️⃣ Image importée localement (assets/images)
-      : resolveLocalImage(activity.image)
-      // 4️⃣ Fallback final
-      ?? '/images/placeholder.jpg';
+  // Si l’item est vide ou pas un objet, je ne rends rien
+  if (!activity || typeof activity !== 'object') return null;
+  const a = activity;
+
+  // Champs sûrs
+  const title     = typeof a.title === 'string' ? a.title : 'Sans titre';
+  const location  = typeof a.location === 'string' ? a.location : '—';
+  const id        = (typeof a.id === 'number' || typeof a.id === 'string') ? a.id : null;
+  const hostId    = (a?.host_user && (typeof a.host_user.id === 'number' || typeof a.host_user.id === 'string')) ? a.host_user.id : null;
+  const hostFirst = typeof a?.host_user?.prenom === 'string' ? a.host_user.prenom : (typeof a?.host_user?.name === 'string' ? a.host_user.name : '');
+  const hostLast  = typeof a?.host_user?.nom === 'string' ? a.host_user.nom : '';
+  const hostLabel = (hostFirst + ' ' + hostLast).trim() || 'Organisateur';
+
+  // Participants
+  const nbRaw = Number(a?.participants);
+  const participants = Number.isFinite(nbRaw) ? nbRaw : 0;
+
+  // Dates (affiche seulement si tableau non vide)
+  const dates = Array.isArray(a?.dates) ? a.dates : [];
+  const hasDates = dates.length > 0;
+
+  // Image (je garde ça simple et zéro risque)
+  let imageSrc = null;
+  if (typeof a?.image_url === 'string' && a.image_url.trim() !== '') {
+    imageSrc = a.image_url; // URL complète calculée côté back
+  } else if (typeof a?.image === 'string' && a.image.trim() !== '') {
+    // Chemins classiques
+    if (a.image.startsWith('/')) {
+      imageSrc = a.image; // déjà absolu
+    } else if (a.image.startsWith('activities/')) {
+      imageSrc = `/storage/${a.image}`; // stockage Laravel
+    }
+  }
+  const onImgError = (e) => { e.currentTarget.remove(); }; // si ça casse, on retire l’image
+
+  // Liens (aucun usage de Ziggy/route ici)
+  const detailsHref    = id     ? `/activities/${id}`         : null;
+  const organizerHref  = hostId ? `/organisateur/${hostId}`   : null;
 
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
-      <img
-        src={imageSrc}
-        alt={activity.title}
-        className="h-48 w-full object-cover"
-        onError={(e) => (e.target.src = '/images/placeholder.jpg')} // sécurité
-      />
+      {imageSrc && (
+        <img
+          src={imageSrc}
+          alt={title}
+          className="h-48 w-full object-cover"
+          onError={onImgError}
+        />
+      )}
+
       <div className="p-4 space-y-2">
         <p className="text-sm text-gray-500">
-          {activity.participants} participant{activity.participants > 1 ? 's' : ''}
+          {participants} participant{participants > 1 ? 's' : ''}
         </p>
 
-        <h2 className="font-semibold text-lg">{activity.title}</h2>
-        <p className="text-sm text-gray-600">{activity.location}</p>
+        <h2 className="font-semibold text-lg">{title}</h2>
+        <p className="text-sm text-gray-600">{location}</p>
 
-        {activity.dates?.length > 0 && (
+        {hasDates && (
           <p className="text-sm text-gray-500">
-            Prochaines dates : {activity.dates.join(', ')}
+            Prochaines dates : {dates.join(', ')}
           </p>
         )}
 
-        {activity.host_user && (
+        {a?.host_user && (
           <p className="text-sm text-gray-700">
             Organisé par{' '}
-            <Link
-              href={route('organisateur.profil', { id: activity.host_user.id })}
-              className="text-blue-600 hover:underline"
-            >
-              {activity.host_user.name}
-            </Link>
+            {organizerHref ? (
+              <Link href={organizerHref} className="text-blue-600 hover:underline">
+                {hostLabel}
+              </Link>
+            ) : (
+              <span className="opacity-70">{hostLabel}</span>
+            )}
           </p>
         )}
 
-        {/* 👇 Bouton redirection vers la page détail */}
-        <Link
-          href={route('activity.details', { id: activity.id })}
-          className="block mt-2 text-center bg-[#247BA0] hover:bg-[#3498DB] text-white py-2 rounded text-sm transition"
-        >
-          En savoir plus
-        </Link>
+        {detailsHref ? (
+          <Link
+            href={detailsHref}
+            className="block mt-2 text-center bg-[#247BA0] hover:bg-[#3498DB] text-white py-2 rounded text-sm transition"
+          >
+            En savoir plus
+          </Link>
+        ) : (
+          <span className="block mt-2 text-center bg-gray-300 text-white py-2 rounded text-sm opacity-60 cursor-not-allowed">
+            En savoir plus
+          </span>
+        )}
       </div>
     </div>
   );

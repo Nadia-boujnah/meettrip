@@ -4,17 +4,23 @@ import { Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function AdminActivities() {
+  // Je récupère depuis Inertia la liste des activités, les filtres et les lieux distincts.
   const { activities, filters, locations } = usePage().props;
 
-  // paginator ou tableau
+  // Si c’est une pagination (paginator), je prends data, sinon j’utilise directement le tableau.
   const rows = Array.isArray(activities) ? activities : (activities?.data ?? []);
 
+  // États locaux pour les filtres et la pagination.
   const [search, setSearch] = useState(filters?.search ?? '');
   const [location, setLocation] = useState(filters?.location ?? '');
   const [perPage, setPerPage] = useState(filters?.perPage ?? 10);
-  const [busyId, setBusyId] = useState(null);
+  const [busyId, setBusyId] = useState(null); // identifie une suppression en cours
 
-  // rafraîchir côté serveur (filtres/pagination)
+  /**
+   * go()
+   * -> Rafraîchit la page côté serveur (Inertia) en gardant les filtres et l’état du tableau.
+   *    preserveScroll garde la position, preserveState évite un rechargement complet.
+   */
   const go = (params = {}) => {
     const query = {
       search,
@@ -29,13 +35,24 @@ export default function AdminActivities() {
     });
   };
 
-  // debounce léger pour la recherche
+  /**
+   * Ici, j’ajoute un petit délai (300 ms) avant d’exécuter la recherche.
+   * Cela évite de relancer une requête serveur à chaque frappe.
+   * (on appelle ça un “délai de frappe” ou anti-rebond)
+   */
   useEffect(() => {
     const t = setTimeout(() => go(), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, location, perPage]);
 
+  /**
+   * handleDelete
+   * -> Supprime une activité après confirmation.
+   *    - Affiche une boîte de dialogue.
+   *    - Met l’ID en “busy” pour désactiver le bouton.
+   *    - Appelle la route Laravel correspondante.
+   */
   const handleDelete = (id) => {
     if (!confirm('Voulez-vous vraiment supprimer cette activité ?')) return;
     setBusyId(id);
@@ -45,11 +62,19 @@ export default function AdminActivities() {
     });
   };
 
+  /**
+   * uniqueLocations
+   * -> Construit la liste des lieux proposés dans le filtre “lieu”.
+   */
   const uniqueLocations = useMemo(() => {
     const server = Array.isArray(locations) ? locations : [];
     return server;
   }, [locations]);
 
+  /**
+   * goto()
+   * -> Permet de naviguer dans les liens de pagination envoyés par le backend Laravel.
+   */
   const goto = (url) => {
     if (!url) return;
     router.get(url, {}, { preserveScroll: true, preserveState: true });
@@ -58,10 +83,11 @@ export default function AdminActivities() {
   return (
     <AppLayout title="Vue des activités">
       <Head title="Activités" />
+
       <div className="p-6 bg-white text-[#1B1B18] space-y-10">
         <h1 className="text-3xl font-bold mb-6">Gestion des activités</h1>
 
-        {/* Filtres */}
+        {/* Barre de filtres : recherche, lieu et nombre d’éléments par page */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <input
             type="text"
@@ -70,6 +96,7 @@ export default function AdminActivities() {
             onChange={(e) => setSearch(e.target.value)}
             className="px-4 py-2 border rounded shadow-sm flex-1"
           />
+
           <select
             value={location}
             onChange={(e) => setLocation(e.target.value)}
@@ -82,6 +109,7 @@ export default function AdminActivities() {
               </option>
             ))}
           </select>
+
           <select
             value={perPage}
             onChange={(e) => setPerPage(Number(e.target.value))}
@@ -95,7 +123,7 @@ export default function AdminActivities() {
           </select>
         </div>
 
-        {/* Tableau */}
+        {/* Tableau principal des activités */}
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">
@@ -108,9 +136,11 @@ export default function AdminActivities() {
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
               {rows.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50 transition">
+                  {/* Image + titre de l’activité */}
                   <td className="px-4 py-3 font-medium text-gray-900">
                     <div className="flex items-center gap-3">
                       <img
@@ -124,12 +154,16 @@ export default function AdminActivities() {
                       <span>{a.title}</span>
                     </div>
                   </td>
+
+                  {/* Détails du tableau */}
                   <td className="px-4 py-3 text-gray-600">{a.location ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-600">{a.host_user?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-600">{a.participants ?? 0}</td>
                   <td className="px-4 py-3 text-gray-500">
                     {(a.dates ?? []).join(', ')}
                   </td>
+
+                  {/* Action supprimer */}
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleDelete(a.id)}
@@ -143,6 +177,7 @@ export default function AdminActivities() {
                 </tr>
               ))}
 
+              {/* Si aucune activité correspond */}
               {rows.length === 0 && (
                 <tr>
                   <td colSpan="6" className="text-center text-gray-400 py-4">
@@ -154,7 +189,7 @@ export default function AdminActivities() {
           </table>
         </div>
 
-        {/* Pagination (si paginator) */}
+        {/* Pagination : boutons générés depuis Laravel */}
         {activities?.links && (
           <div className="flex items-center gap-2 pt-4">
             {activities.links.map((link, i) => (
