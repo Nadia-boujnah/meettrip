@@ -24,7 +24,7 @@ class Activities extends Model
         'host_user_id',
         'description',
         'dates', // JSON
-        'why',
+    
     ];
 
     // Je caste automatiquement certains attributs quand je les lis/écris

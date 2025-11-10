@@ -26,7 +26,6 @@ export default function Annonces() {
     participants: 1,
     date: '',
     description: '',
-    why: '',
     image: null,      // upload image (optionnel)
   });
 
@@ -36,7 +35,6 @@ export default function Annonces() {
       data.title.trim() &&
       data.location.trim() &&
       data.description.trim() &&
-      data.why.trim() &&
       String(data.latitude).length > 0 &&
       String(data.longitude).length > 0,
     [data]
@@ -248,17 +246,7 @@ export default function Annonces() {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Pourquoi</label>
-              <textarea
-                rows="3"
-                className="w-full border px-3 py-2 rounded text-sm"
-                value={data.why}
-                onChange={(e) => setData('why', e.target.value)}
-                required
-              />
-              {errors.why && <p className="text-red-600 text-xs mt-1">{errors.why}</p>}
-            </div>
+       
 
             <div className="flex items-center gap-3">
               <button

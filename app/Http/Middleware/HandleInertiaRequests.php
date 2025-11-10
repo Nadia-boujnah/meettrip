@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
@@ -36,13 +37,17 @@ class HandleInertiaRequests extends Middleware
 
         $user = $request->user();
 
-        // Compteur "pending" pour l'organisateur (comme avant)
+        // Compteur "pending" pour l'organisateur (protégé si la table/colonne n'existe pas en local)
         $hostPending = 0;
         if ($user) {
-            $hostPending = DB::table('activity_user')
-                ->where('host_id', $user->id)
-                ->where('status', 'pending')
-                ->count();
+            try {
+                $hostPending = DB::table('activity_user')
+                    ->where('host_id', $user->id)
+                    ->where('status', 'pending')
+                    ->count();
+            } catch (\Throwable $e) {
+                $hostPending = 0;
+            }
         }
 
         return [
@@ -78,7 +83,7 @@ class HandleInertiaRequests extends Middleware
                     })
                     ->count();
 
-                // Nombre de conversations contenant au moins un non-lu (optionnel)
+                // Nombre de conversations contenant au moins un non-lu
                 $unreadThreads = Conversation::query()
                     ->where(function ($q) use ($user) {
                         $q->where('user_one_id', $user->id)

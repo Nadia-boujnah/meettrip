@@ -15,7 +15,7 @@ class StatisticsController extends Controller
         // -- On exclut les admins --
         $baseUsers = User::query()->where('role', '!=', 'admin');
 
-        // -- Anti-brouillon : on garde uniquement les vrais comptes (mêmes filtres que la page IdentityValidation) --
+        // -- Comptes "réels"
         $baseUsersWithRealInfo = (clone $baseUsers)->where(function ($q) {
             $q->whereNotNull('email')
               ->orWhereNotNull('prenom')
@@ -29,7 +29,7 @@ class StatisticsController extends Controller
             ->where('verification_status', 'approved')
             ->count();
 
-        // ✅ Identités à valider (même logique que la page /admin/identity-validation)
+        // Identités à valider
         $toReview = (clone $baseUsersWithRealInfo)
             ->where(function ($q) {
                 $q->whereNull('verification_status')
@@ -37,26 +37,41 @@ class StatisticsController extends Controller
             })
             ->count();
 
-        // Si tu veux compter seulement ceux avec document :
-        // ->whereNotNull('document')->where('document', '!=', '')
-
-        // --- Rôles ---
+        // Rôles
         $organisateurs = (clone $baseUsers)->where('role', 'organisateur')->count();
         $participants  = (clone $baseUsers)->where('role', 'participant')->count();
 
-        // --- Activités ---
+        // Activités
         $totalActivities = Activities::count();
 
-        // --- Statistiques d’évolution mensuelle des activités ---
-        $year = now()->year;
+        // ---- Evolution mensuelle (multi-SGBD) ----
+        $year   = now()->year;
+        $driver = DB::connection()->getDriverName(); // "mysql", "mariadb", "sqlite", ...
 
-        // Pour SQLite (compatible avec ta config actuelle)
-        $perMonth = Activities::selectRaw('CAST(STRFTIME("%m", created_at) AS INTEGER) as m, COUNT(*) as c')
-            ->whereYear('created_at', $year)
-            ->groupBy('m')
-            ->pluck('c', 'm');
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            // MySQL / MariaDB
+            $perMonth = Activities::selectRaw('MONTH(created_at) as m, COUNT(*) as c')
+                ->whereYear('created_at', $year)
+                ->groupByRaw('MONTH(created_at)')
+                ->orderBy('m')
+                ->pluck('c', 'm');
+        } elseif ($driver === 'sqlite') {
+            // SQLite
+            $perMonth = Activities::selectRaw('CAST(STRFTIME("%m", created_at) AS INTEGER) as m, COUNT(*) as c')
+                ->whereYear('created_at', $year)
+                ->groupBy('m')
+                ->orderBy('m')
+                ->pluck('c', 'm');
+        } else {
+            // Fallback (ex. PostgreSQL)
+            $perMonth = Activities::selectRaw('EXTRACT(MONTH FROM created_at)::int as m, COUNT(*) as c')
+                ->whereYear('created_at', $year)
+                ->groupBy('m')
+                ->orderBy('m')
+                ->pluck('c', 'm');
+        }
 
-        // On prépare un tableau [janv→déc] avec 0 si aucun résultat
+        // Tableau [janv→déc]
         $series = [];
         for ($m = 1; $m <= 12; $m++) {
             $series[] = (int) ($perMonth[$m] ?? 0);

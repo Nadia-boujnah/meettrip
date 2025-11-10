@@ -35,7 +35,7 @@ class ActivitiesConnectedController extends Controller
             'participants' => 'required|integer|min:1|max:100',
             'date'         => 'nullable|date',
             'description'  => 'required|string',
-            'why'          => 'required|string',
+            
             'image'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
@@ -108,7 +108,6 @@ class ActivitiesConnectedController extends Controller
             'participants' => 'required|integer|min:1|max:100',
             'date'         => 'nullable|date',
             'description'  => 'required|string',
-            'why'          => 'required|string',
             'image'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 

@@ -43,11 +43,7 @@ export default function DetailsActivityConnected() {
         <p className="text-gray-600">{activity.location}</p>
         <p className="text-gray-700 mt-4">{activity.description}</p>
 
-        {/* Bloc “Pourquoi” pour donner du contexte à l’utilisateur */}
-        <div className="bg-gray-100 p-4 rounded-md mt-6">
-          <h2 className="text-lg font-semibold">Pourquoi faire cette activité ?</h2>
-          <p className="text-gray-700">{activity.why}</p>
-        </div>
+  
 
         {/* Liste des dates disponibles en clair (complément d’information) */}
         {activity.dates?.length > 0 && (

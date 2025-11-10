@@ -13,7 +13,6 @@ export default function AnnoncesCreate() {
     participants: 1,
     date: '',
     description: '',
-    why: '',
     image: null,
   });
 
@@ -57,7 +56,7 @@ export default function AnnoncesCreate() {
       forceFormData: true,
       onSuccess: () => {
         // Je remets tous les champs à zéro
-        reset('title','location','latitude','longitude','participants','date','description','why','image');
+        reset('title','location','latitude','longitude','participants','date','description','image');
       },
     });
   };
@@ -132,10 +131,7 @@ export default function AnnoncesCreate() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Pourquoi</label>
-            <textarea className="w-full border px-3 py-2 rounded text-sm"
-              value={data.why || ''} onChange={e=>setData('why', e.target.value)} rows={2} />
-            {errors.why && <p className="text-red-600 text-sm">{errors.why}</p>}
+            <textarea className="w-full border px-3 py-2 rounded text-sm"/>
           </div>
 
           <div>

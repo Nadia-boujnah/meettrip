@@ -9,7 +9,7 @@ return new class extends Migration {
         Schema::table('activities', function (Blueprint $table) {
             // Sur SQLite, JSON = TEXT, c'est ok
             if (! Schema::hasColumn('activities', 'dates')) {
-                $table->json('dates')->nullable()->after('why');
+                $table->json('dates')->nullable();
             }
         });
     }

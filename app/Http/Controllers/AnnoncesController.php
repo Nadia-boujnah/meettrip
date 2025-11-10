@@ -24,7 +24,6 @@ class AnnoncesController extends Controller
                 'title'        => $a->title,
                 'location'     => $a->location,
                 'description'  => $a->description,
-                'why'          => $a->why,
                 'date'         => $a->date,
                 'dates'        => $a->dates ?? [],
                 'image'        => $a->image,
@@ -49,7 +48,6 @@ class AnnoncesController extends Controller
         'participants' => 'required|integer|min:1|max:100',
         'date'         => 'nullable|date',       // ⬅️ arrive du formulaire
         'description'  => 'required|string',
-        'why'          => 'required|string',
         'image'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
     ]);
 
@@ -98,7 +96,6 @@ class AnnoncesController extends Controller
                 'title'        => $a->title,
                 'location'     => $a->location,
                 'description'  => $a->description,
-                'why'          => $a->why,
                 'date'         => $a->date,
                 'image_url'    => $a->image_url,
                 'latitude'     => $a->latitude,
@@ -119,7 +116,6 @@ public function update(Request $request, int $id)
         'participants' => 'required|integer|min:1|max:100',
         'date'         => 'nullable|date',       // ⬅️ arrive du formulaire
         'description'  => 'required|string',
-        'why'          => 'required|string',
         'image'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
     ]);
 

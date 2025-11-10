@@ -378,8 +378,8 @@ export default function Home() {
         ),
       },
       {
-        title: "Étape 4 : Participez & laissez un avis",
-        text: "Vivez l’activité et aidez la communauté avec un retour.",
+        title: "Étape 4 : Participez",
+        text: "Vivez l’activité",
         icon: (
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-10 h-10">
             <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21z" />

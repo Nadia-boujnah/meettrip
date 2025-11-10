@@ -65,15 +65,6 @@ export default function DetailsActivity() {
           {activity.description}
         </p>
 
-        {/* Pourquoi */}
-        {activity.why && (
-          <div className="bg-[#F5F5F5] p-4 rounded-md mb-8">
-            <h2 className="text-lg font-semibold mb-2 text-[#1B1B18]">
-              Pourquoi faire cette activité ?
-            </h2>
-            <p className="text-sm text-gray-700">{activity.why}</p>
-          </div>
-        )}
 
         {/* Dates disponibles */}
         {activity.dates && activity.dates.length > 0 && (

@@ -26,7 +26,9 @@
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
     @routes
-    {{-- Production: charge les assets buildés (CSS + JS) --}}
+    {{-- DEV: injecte le préambule React Refresh (nécessaire pour @vitejs/plugin-react) --}}
+    @viteReactRefresh
+    {{-- Assets Vite (CSS + JS) --}}
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead
   </head>

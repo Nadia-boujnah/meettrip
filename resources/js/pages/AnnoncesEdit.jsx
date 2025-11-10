@@ -42,7 +42,6 @@ export default function AnnoncesEdit() {
     participants: activity.participants ?? 1,
     date: toISODate(activity.date ?? ''), // ← normalisé pour l’input type="date"
     description: activity.description ?? '',
-    why: activity.why ?? '',
     image: null,
   });
 
@@ -164,10 +163,7 @@ export default function AnnoncesEdit() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Pourquoi</label>
-            <textarea className="w-full border px-3 py-2 rounded"
-              value={data.why || ''} onChange={e=>setData('why', e.target.value)} />
-            {errors.why && <p className="text-red-600 text-sm">{errors.why}</p>}
+            <textarea className="w-full border px-3 py-2 rounded"/>
           </div>
 
           <div>

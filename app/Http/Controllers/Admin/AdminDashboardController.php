@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Activities;
+use Illuminate\Support\Facades\DB; // ✅ pour détecter le driver DB
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
@@ -47,13 +48,32 @@ class AdminDashboardController extends Controller
         $totalActivities = Activities::count();
 
         // --- Série mensuelle des activités (année courante) ---
-        $year = now()->year;
+        $year   = now()->year;
+        $driver = DB::connection()->getDriverName(); // "mysql", "mariadb", "sqlite", ...
 
-        // SQLite friendly
-        $perMonth = Activities::selectRaw('CAST(STRFTIME("%m", created_at) AS INTEGER) as m, COUNT(*) as c')
-            ->whereYear('created_at', $year)
-            ->groupBy('m')
-            ->pluck('c', 'm');
+        // ⚙️ Agrégat mensuel multi-SGBD
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            // MySQL / MariaDB
+            $perMonth = Activities::selectRaw('MONTH(created_at) as m, COUNT(*) as c')
+                ->whereYear('created_at', $year)
+                ->groupByRaw('MONTH(created_at)')
+                ->orderBy('m')
+                ->pluck('c', 'm');
+        } elseif ($driver === 'sqlite') {
+            // SQLite
+            $perMonth = Activities::selectRaw('CAST(STRFTIME("%m", created_at) AS INTEGER) as m, COUNT(*) as c')
+                ->whereYear('created_at', $year)
+                ->groupBy('m')
+                ->orderBy('m')
+                ->pluck('c', 'm');
+        } else {
+            // PostgreSQL et autres
+            $perMonth = Activities::selectRaw('EXTRACT(MONTH FROM created_at)::int as m, COUNT(*) as c')
+                ->whereYear('created_at', $year)
+                ->groupBy('m')
+                ->orderBy('m')
+                ->pluck('c', 'm');
+        }
 
         $labels = ['Janv','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
         $series = [];
@@ -66,7 +86,7 @@ class AdminDashboardController extends Controller
                 'users'      => $totalUsers,
                 'validated'  => $validated,
                 'activities' => $totalActivities,
-                'toReview'   => $toReview, // << doit matcher Statistics (ici 5)
+                'toReview'   => $toReview, // << doit matcher Statistics
             ],
             'breakdown' => [
                 'validated'    => $validated,

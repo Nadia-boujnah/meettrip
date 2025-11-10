@@ -61,7 +61,6 @@ Route::get('/', function () {
             'location'    => $a->location,
             'participants'=> $a->participants,
             'description' => $a->description,
-            'why'         => $a->why,
             'dates'       => $a->dates ?? [],
             'date'        => $a->date,
             'image'       => $a->image,
@@ -108,7 +107,6 @@ Route::get('/activities', function () {
                 'location'    => $a->location,
                 'participants'=> $a->participants,
                 'description' => $a->description,
-                'why'         => $a->why,
                 'dates'       => $a->dates ?? [],
                 'date'        => $a->date,
                 'image'       => $a->image,
@@ -119,8 +117,8 @@ Route::get('/activities', function () {
             ];
         });
 
-    return Inertia::render('PublicPages/activities', ['activities' => $activities]);
-})->name('activities');
+    return Inertia::render('PublicPages/Activities', ['activities' => $activities]);
+})->name('activities.index');
 
 Route::get('/activities/{id}', function (int $id) {
     $a = Activities::with('hostUser')->findOrFail($id);
@@ -132,7 +130,6 @@ Route::get('/activities/{id}', function (int $id) {
             'location'    => $a->location,
             'participants'=> $a->participants,
             'description' => $a->description,
-            'why'         => $a->why,
             'dates'       => $a->dates ?? [],
             'date'        => $a->date,
             'image'       => $a->image,
@@ -223,7 +220,7 @@ Route::middleware(['auth'])->group(function () {
 
     // CRUD annonces
     Route::get('/activities/create',      [AnnoncesController::class, 'create'])->name('activities.create');
-    Route::post('/activities',            [AnnoncesController::class, 'store'])->name('activities.store');
+    Route::post('/activities/store',      [AnnoncesController::class, 'store'])->name('activities.store');
     Route::get('/activities/{id}/edit',   [AnnoncesController::class, 'edit'])->whereNumber('id')->name('activities.edit');
     Route::put('/activities/{id}',        [AnnoncesController::class, 'update'])->whereNumber('id')->name('activities.update');
     Route::delete('/activities/{id}',     [AnnoncesController::class, 'destroy'])->whereNumber('id')->name('activities.destroy');
@@ -294,3 +291,4 @@ Route::get('/admin-activities', [AdminActivitiesController::class, 'index'])
 Route::delete('/admin-activities/{activity}', [AdminActivitiesController::class, 'destroy'])
     ->whereNumber('activity')
     ->name('admin.activities.destroy');
+

@@ -41,7 +41,6 @@ class DemoInteractionSeeder extends Seeder
                 'location'     => 'Cannes, France',
                 'participants' => 8,
                 'description'  => 'Naviguez au coucher du soleil.',
-                'why'          => 'Pour profiter de la Côte d’Azur.',
                 // image depuis assets front (pas storage)
                 'image'        => 'images/excursionbateau.png',
                 // dates stockées en JSON (ton modèle cast en array)
